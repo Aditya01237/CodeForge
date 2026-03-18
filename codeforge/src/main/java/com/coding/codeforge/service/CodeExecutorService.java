@@ -27,7 +27,7 @@ public class CodeExecutorService {
 
         ProcessBuilder pb = new ProcessBuilder(
                 "docker", "run", "--rm",
-                "--memory=100m",
+                "--memory=200m",
                 "--cpus=0.5",
                 "--network=none",
                 "-v", folder + ":/app",

@@ -1,10 +1,15 @@
-FROM gcc:11
+# Use lightweight base
+FROM debian:bullseye-slim
 
 WORKDIR /app
 
-# Create non-root user (security)
+# Install ONLY required tools
+RUN apt-get update && apt-get install -y \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
 RUN useradd -m runner
 USER runner
 
-# Default command (will be overridden)
 CMD ["bash"]
