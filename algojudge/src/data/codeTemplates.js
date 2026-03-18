@@ -1,5 +1,5 @@
 export const STARTERS = {
-  "C++": `#include <bits/stdc++.h>
+  "C++": `#include <iostream>
 using namespace std;
 
 int main() {

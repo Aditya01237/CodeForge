@@ -42,19 +42,16 @@ export default function ProblemPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          code: code, // ✅ editor code
-          language: lang, // ✅ selected language
-          input: input, // 🔥 NEW (important)
-          problemId: Number(id),
-        }),
+          code: code,
+          language: "cpp",
+          problemId: problem.id
+        })
       });
 
       const data = await res.json();
+      console.log(data);
 
-      setOutput({
-        type: data.success ? "success" : "error",
-        text: data.output,
-      });
+      setOutput(data);
     } catch (err) {
       console.log(err);
       setOutput({
@@ -66,14 +63,37 @@ export default function ProblemPage() {
     setRunning(false);
   };
 
-  const handleSubmit = () => {
-    setRunning(true);
+  const handleSubmit = async () => {
+  setRunning(true);
 
-    setTimeout(() => {
-      setRunning(false);
-      setOutput({ type: "success", text: "Accepted ✓" });
-    }, 1800);
-  };
+  try {
+    const res = await fetch("http://localhost:8080/api/submit", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        code: code,
+        language: "cpp",
+        problemId: problem.id
+      })
+    });
+
+    const data = await res.json();
+    console.log("SUBMIT RESPONSE:", data);
+
+    setOutput(data);
+
+  } catch (err) {
+    console.log(err);
+    setOutput({
+      status: "Error",
+      output: "Server error ❌"
+    });
+  }
+
+  setRunning(false);
+};
 
   // 🔥 LOAD STARTER + SAMPLE INPUT
   useEffect(() => {

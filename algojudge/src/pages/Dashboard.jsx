@@ -66,10 +66,6 @@ export default function Dashboard() {
             Master Every <br />
             <span className="text-blue-400">Algorithm.</span>
           </h1>
-
-          <p className="text-sm text-gray-400">
-            {total} problems curated for interview prep.
-          </p>
         </div>
 
         {/* PROGRESS */}
