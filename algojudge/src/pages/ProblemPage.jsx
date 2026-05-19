@@ -13,6 +13,7 @@ export default function ProblemPage() {
   const problem = problems.find((p) => p.id === Number(id));
 
   const containerRef = useRef(null);
+  const rightRef = useRef(null);
 
   const draggingVertical = useRef(false);
   const draggingHorizontal = useRef(false);
@@ -25,105 +26,81 @@ export default function ProblemPage() {
   const [bottomHeight, setBottomHeight] = useState(220);
 
   const [code, setCode] = useState("");
-  const [input, setInput] = useState(""); // 🔥 NEW
+  const [input, setInput] = useState("");
 
   const MIN_EDITOR_HEIGHT = 200;
+  const RESIZER_HEIGHT = 6;
 
-  // 🔥 RUN CODE (NOW SENDS INPUT ALSO)
+  // RUN CODE
   const handleRun = async () => {
     setRunning(true);
-    console.log("SENDING CODE:", code);
-    console.log("SENDING INPUT:", input);
-
     try {
       const res = await fetch("http://localhost:8080/api/run", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          code: code,
+          code,
           language: "cpp",
-          problemId: problem.id
-        })
+          input,
+          problemId: problem.id,
+        }),
       });
-
       const data = await res.json();
       console.log(data);
-
+      
       setOutput(data);
     } catch (err) {
-      console.log(err);
-      setOutput({
-        type: "error",
-        text: "Server error ❌",
-      });
+      setOutput({ status: "Error", message: "Server error ❌" });
     }
-
     setRunning(false);
   };
 
+  // SUBMIT
   const handleSubmit = async () => {
-  setRunning(true);
+    setRunning(true);
+    try {
+      const res = await fetch("http://localhost:8080/api/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code,
+          language: "cpp",
+          problemId: problem.id,
+        }),
+      });
+      const data = await res.json();
+      setOutput(data);
+    } catch (err) {
+      setOutput({ status: "Error", message: "Server error ❌" });
+    }
+    setRunning(false);
+  };
 
-  try {
-    const res = await fetch("http://localhost:8080/api/submit", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        code: code,
-        language: "cpp",
-        problemId: problem.id
-      })
-    });
-
-    const data = await res.json();
-    console.log("SUBMIT RESPONSE:", data);
-
-    setOutput(data);
-
-  } catch (err) {
-    console.log(err);
-    setOutput({
-      status: "Error",
-      output: "Server error ❌"
-    });
-  }
-
-  setRunning(false);
-};
-
-  // 🔥 LOAD STARTER + SAMPLE INPUT
+  // Init code + input when lang or problem changes
   useEffect(() => {
     setCode(STARTERS[lang] || "");
+    if (problem?.sampleInput) setInput(problem.sampleInput);
+  }, [lang, problem]);
 
-    if (problem?.sampleInput) {
-      setInput(problem.sampleInput);
-    }
-
+  // Drag listeners — stable, no state in closure
+  useEffect(() => {
     const onMouseMove = (e) => {
-      // VERTICAL
+      // VERTICAL DRAG (LEFT-RIGHT)
       if (draggingVertical.current && containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
         const percent = ((e.clientX - rect.left) / rect.width) * 100;
-
         if (percent > 15 && percent < 85) {
           setLeftWidth(percent);
         }
       }
 
-      // HORIZONTAL
-      if (draggingHorizontal.current) {
-        const newHeight = window.innerHeight - e.clientY;
-
-        if (
-          newHeight > 120 &&
-          newHeight < window.innerHeight - MIN_EDITOR_HEIGHT
-        ) {
-          setBottomHeight(newHeight);
-        }
+      // HORIZONTAL DRAG (TOP-BOTTOM)
+      if (draggingHorizontal.current && rightRef.current) {
+        const rect = rightRef.current.getBoundingClientRect();
+        const newBottomHeight = rect.bottom - e.clientY;
+        const minBottom = 120;
+        const maxBottom = rect.height - MIN_EDITOR_HEIGHT - RESIZER_HEIGHT;
+        setBottomHeight(Math.max(minBottom, Math.min(newBottomHeight, maxBottom)));
       }
     };
 
@@ -139,12 +116,13 @@ export default function ProblemPage() {
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
     };
-  }, [lang, problem]);
+  }, []); // empty — no stale closures
 
   if (!problem) return <div>Problem not found</div>;
 
   return (
     <div className="flex flex-col h-screen bg-[#000000]">
+
       {/* TOP BAR */}
       <TopBar
         problem={problem}
@@ -155,26 +133,29 @@ export default function ProblemPage() {
       />
 
       <div ref={containerRef} className="flex flex-1 overflow-hidden">
+
         {/* LEFT PANEL */}
-        <div
-          className="overflow-hidden"
-          style={{ width: `${leftWidth}%`, minWidth: 280 }}
-        >
+        <div style={{ width: `${leftWidth}%`, minWidth: 280 }} className="overflow-hidden">
           <ProblemPanel problem={problem} />
         </div>
 
         {/* VERTICAL RESIZER */}
         <div
           onMouseDown={() => (draggingVertical.current = true)}
-          className="w-[6px] cursor-col-resize bg-[#000000]"
+          className="w-[6px] cursor-col-resize bg-[#111] flex-shrink-0"
         />
 
-        {/* RIGHT SIDE */}
-        <div className="flex flex-col" style={{ width: `${100 - leftWidth}%` }}>
-          {/* EDITOR */}
+        {/* RIGHT PANEL */}
+        <div
+          ref={rightRef}
+          className="flex flex-col overflow-hidden"
+          style={{ width: `${100 - leftWidth}%` }}
+        >
+
+          {/* EDITOR — explicit height so Monaco stays stable */}
           <div
-            className="flex-1 overflow-hidden border-b border-[#2A2F3A]"
-            style={{ minHeight: MIN_EDITOR_HEIGHT }}
+            style={{ height: `calc(100% - ${bottomHeight}px - ${RESIZER_HEIGHT}px)` }}
+            className="overflow-hidden border-b border-[#2A2F3A] flex-shrink-0"
           >
             <EditorPanel
               problem={problem}
@@ -187,19 +168,19 @@ export default function ProblemPage() {
           {/* HORIZONTAL RESIZER */}
           <div
             onMouseDown={() => (draggingHorizontal.current = true)}
-            className="h-[6px] cursor-row-resize bg-[#000000]"
+            className="h-[6px] cursor-row-resize bg-[#111] flex-shrink-0"
           />
 
           {/* BOTTOM PANEL */}
-          <div style={{ height: bottomHeight }}>
+          <div style={{ height: bottomHeight }} className="overflow-hidden flex-shrink-0">
             <BottomPanel
-              problem={problem}
               output={output}
               running={running}
-              input={input} // 🔥 NEW
-              setInput={setInput} // 🔥 NEW
+              input={input}
+              setInput={setInput}
             />
           </div>
+
         </div>
       </div>
     </div>

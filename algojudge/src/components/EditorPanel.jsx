@@ -14,25 +14,8 @@ export default function EditorPanel({ code, setCode, onLangChange }) {
   const switchLang = (l) => {
     setLang(l);
     onLangChange?.(l);
-
-    // 🔥 sync parent code
     setCode(codeMap[l] || STARTERS[l]);
-
     setOpenMenu(null);
-  };
-
-  const updateCode = (value) => {
-    setCodeMap((prev) => ({
-      ...prev,
-      [lang]: value,
-    }));
-  };
-
-  const resetCode = () => {
-    setCodeMap((prev) => ({
-      ...prev,
-      [lang]: STARTERS[lang],
-    }));
   };
 
   const monacoLang =
@@ -44,7 +27,6 @@ export default function EditorPanel({ code, setCode, onLangChange }) {
           ? "java"
           : "javascript";
 
-  // Theme
   const handleEditorWillMount = (monaco) => {
     monaco.editor.defineTheme("leetcodeDark", {
       base: "vs-dark",
@@ -77,12 +59,9 @@ export default function EditorPanel({ code, setCode, onLangChange }) {
       className="flex flex-col border-t-[0.5px] border-l-[0.5px] border-b-[0.5px] border-gray-500 h-full bg-[#1E1E1E] rounded-tl-lg"
       onClick={() => setOpenMenu(null)}
     >
-      {/* 🔥 TOOLBAR (FIXED HEIGHT) */}
-      <div
-        className="h-11 flex items-center justify-between px-4 
-        border-b border-[#2A2F3A] flex-shrink-0"
-      >
-        {/* LEFT */}
+      {/* TOOLBAR */}
+      <div className="h-11 flex items-center justify-between px-4 border-b border-[#2A2F3A] flex-shrink-0">
+        {/* LEFT — Language selector */}
         <div className="relative">
           <button
             onClick={(e) => {
@@ -109,66 +88,78 @@ export default function EditorPanel({ code, setCode, onLangChange }) {
           )}
         </div>
 
-        {/* RIGHT */}
-        <div className="relative">
+        {/* RIGHT — Font size selector */}
+        {/* RIGHT — Reset + Font size */}
+        <div className="flex items-center gap-2">
+          {/* 🔁 RESET BUTTON */}
           <button
             onClick={(e) => {
               e.stopPropagation();
-              setOpenMenu(openMenu === "font" ? null : "font");
+              const starter = STARTERS[lang] || "";
+              setCodeMap((prev) => ({ ...prev, [lang]: starter }));
+              setCode(starter);
             }}
-            className="text-xs font-mono px-3 py-1.5 rounded border border-[#30363D] text-[#8B949E]"
+            className="text-xs px-3 py-1.5 rounded border border-[#30363D] text-[#8B949E] hover:text-white hover:border-[#58A6FF]"
           >
-            {fontSize}px ▾
+            ↺
           </button>
 
-          {openMenu === "font" && (
-            <div className="absolute right-0 mt-2 w-28 bg-[#1E1E1E] border border-[#30363D] rounded-md z-50">
-              {FONTSIZES.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => {
-                    setFontSize(s);
-                    setOpenMenu(null);
-                  }}
-                  className="w-full text-left px-4 py-2 text-xs text-teal-50 font-mono hover:bg-[#21262D]"
-                >
-                  {s}px
-                </button>
-              ))}
-            </div>
-          )}
+          {/* FONT SIZE DROPDOWN */}
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpenMenu(openMenu === "font" ? null : "font");
+              }}
+              className="text-xs font-mono px-3 py-1.5 rounded border border-[#30363D] text-[#8B949E]"
+            >
+              {fontSize}px ▾
+            </button>
+
+            {openMenu === "font" && (
+              <div className="absolute right-0 mt-2 w-28 bg-[#1E1E1E] border border-[#30363D] rounded-md z-50">
+                {FONTSIZES.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => {
+                      setFontSize(s);
+                      setOpenMenu(null);
+                    }}
+                    className="w-full text-left px-4 py-2 text-xs text-teal-50 font-mono hover:bg-[#21262D]"
+                  >
+                    {s}px
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Editor */}
-      <Editor
-        height="100%"
-        language={monacoLang}
-        theme="leetcodeDark"
-        beforeMount={handleEditorWillMount}
-        value={codeMap[lang] || ""}
-        onChange={(value) => {
-          const updated = value || "";
-
-          // update local map
-          setCodeMap((prev) => ({
-            ...prev,
-            [lang]: updated,
-          }));
-
-          // 🔥 VERY IMPORTANT → update parent
-          setCode(updated);
-        }}
-        options={{
-          fontSize,
-          fontFamily: "JetBrains Mono",
-          minimap: { enabled: false },
-          automaticLayout: true,
-          scrollBeyondLastLine: false,
-          padding: { top: 12 },
-          lineHeight: 22,
-        }}
-      />
+      {/* MONACO EDITOR — fills remaining height */}
+      <div className="flex-1 overflow-hidden">
+        <Editor
+          height="100%"
+          language={monacoLang}
+          theme="leetcodeDark"
+          beforeMount={handleEditorWillMount}
+          value={codeMap[lang] || ""}
+          onChange={(value) => {
+            const updated = value || "";
+            setCodeMap((prev) => ({ ...prev, [lang]: updated }));
+            setCode(updated);
+          }}
+          options={{
+            fontSize,
+            fontFamily: "JetBrains Mono",
+            minimap: { enabled: false },
+            automaticLayout: true,
+            scrollBeyondLastLine: false,
+            padding: { top: 12 },
+            lineHeight: 22,
+          }}
+        />
+      </div>
     </div>
   );
 }

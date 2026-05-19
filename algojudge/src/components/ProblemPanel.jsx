@@ -1,25 +1,65 @@
-import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+const MONO = "'JetBrains Mono', 'Fira Code', ui-monospace, monospace";
+const SANS = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
-export default function ProblemPanel({ problem }) {
-  const [open, setOpen] = useState({});
+const Section = ({ title, children }) => (
+  <div>
+    <div className="text-lg font-semibold tracking-[0.1em] uppercase text-white mb-3 pb-2 border-b border-[#242424]">
+      {title}
+    </div>
+    {children}
+  </div>
+);
 
-  const toggle = (key) => setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
+const BulletRow = ({ children }) => (
+  <div className="flex gap-2.5 text-[15px] text-white leading-[1.7] mb-1.5">
+    <span className="text-[#444] shrink-0 pt-px">›</span>
+    <span>{children}</span>
+  </div>
+);
 
+const ColLabel = ({ children }) => (
+  <div className="text-md font-bold tracking-[0.1em] uppercase text-white mb-2.5">
+    {children}
+  </div>
+);
+
+const Pre = ({ children }) => (
+  <pre
+    className="m-0 text-[13px] leading-[1.75] text-white whitespace-pre-wrap break-words"
+    style={{ fontFamily: MONO }}
+  >
+    {children}
+  </pre>
+);
+
+const ProblemPanel = ({ problem }) => {
   if (!problem) return null;
 
   return (
-    <div className="h-full rounded-tr-lg border-t border-r border-[#2A2F3A] bg-[#1E1E1E] text-[#E6EDF3] flex flex-col">
-      <div className="flex-1 overflow-y-auto px-6 py-6">
-        {/* TITLE */}
-        <h1 className="text-[22px] font-semibold mb-5 tracking-tight">
-          {problem.id}. {problem.title}
+    <div
+      className="h-full bg-[#1E1E1E] text-white flex flex-col text-sm"
+      style={{ fontFamily: SANS }}
+    >
+      {/* HEADER */}
+      <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-[#2a2a2a] shrink-0">
+        <span
+          className="text-[15px] font-semibold text-white bg-[#252525] border border-[#333] px-2 py-0.5 rounded-[5px] tracking-wide"
+          style={{ fontFamily: MONO }}
+        >
+          #{problem.id}
+        </span>
+        <h1 className="text-[18px] font-semibold text-white m-0 tracking-tight">
+          {problem.title}
         </h1>
+      </div>
+
+      {/* BODY */}
+      <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-6">
 
         {/* DESCRIPTION */}
-        <div className="space-y-3">
+        <div>
           {problem.description?.map((para, i) => (
-            <p key={i} className="text-[14px] text-[#C9D1D9] leading-6">
+            <p key={i} className="text-[17px] leading-[1.8] text-white mb-2.5 last:mb-0 m-0">
               {para}
             </p>
           ))}
@@ -27,201 +67,80 @@ export default function ProblemPanel({ problem }) {
 
         {/* INPUT FORMAT */}
         {problem.inputFormat && (
-          <>
-            <h2 className="text-[18px] font-semibold mt-7 mb-3">
-              Input Format
-            </h2>
-
-            <ul className="space-y-2 mb-5">
-              {problem.inputFormat.map((line, i) => (
-                <li key={i} className="flex gap-2 text-[14px] text-[#C9D1D9]">
-                  <span className="text-[#6E7681]">•</span>
-                  <span>{line}</span>
-                </li>
-              ))}
-            </ul>
-          </>
+          <Section title="Input Format">
+            {problem.inputFormat.map((line, i) => (
+              <BulletRow key={i}>{line}</BulletRow>
+            ))}
+          </Section>
         )}
 
         {/* OUTPUT FORMAT */}
         {problem.outputFormat && (
-          <>
-            <h2 className="text-[18px] font-semibold mb-3">Output Format</h2>
-
-            <ul className="space-y-2 mb-5">
-              {problem.outputFormat.map((line, i) => (
-                <li key={i} className="flex gap-2 text-[14px] text-[#C9D1D9]">
-                  <span className="text-[#6E7681]">•</span>
-                  <span>{line}</span>
-                </li>
-              ))}
-            </ul>
-          </>
+          <Section title="Output Format">
+            {problem.outputFormat.map((line, i) => (
+              <BulletRow key={i}>{line}</BulletRow>
+            ))}
+          </Section>
         )}
 
-        {/* NOTE */}
-        {problem.note && (
-          <div className="mt-5 text-[14px] text-[#8B949E] flex gap-2">
-            <span>💡</span>
-            <span>{problem.note}</span>
-          </div>
-        )}
-
-        {/* EXAMPLE (CODEFORCES STYLE) */}
+        {/* EXAMPLE */}
         {problem.sampleInput && (
-          <>
-            <h2 className="text-[18px] font-semibold mt-7 mb-3">Example</h2>
+          <Section title="Example">
+            <div className="rounded-lg overflow-hidden border border-[#2a2a2a]">
+              <div className="grid grid-cols-2 bg-[#171618]">
+                <div className="p-4 border-r border-[#2a2a2a]">
+                  <ColLabel>Input</ColLabel>
+                  <Pre>{problem.sampleInput}</Pre>
+                </div>
+                <div className="p-4">
+                  <ColLabel>Output</ColLabel>
+                  <Pre>{problem.sampleOutput}</Pre>
+                </div>
+              </div>
 
-            <div className="bg-[#1E1E1E] border border-[#30363D] rounded-lg p-4 mb-6">
-              <CodeBlock label="Input" value={problem.sampleInput} />
-              <CodeBlock label="Output" value={problem.sampleOutput} />
-
-              {/* 🔥 EXPLANATION */}
               {problem.exampleExplanation && (
-                <div className="mt-4 space-y-2">
-                  <div className="text-[#8B949E] text-[12px] uppercase tracking-wide">
-                    Explanation
-                  </div>
-
+                <div className="border-t border-[#2a2a2a] p-4 bg-[#181818]">
+                  <ColLabel>Explanation</ColLabel>
                   {problem.exampleExplanation.map((line, i) => (
-                    <p key={i} className="text-[13px] text-[#C9D1D9] leading-5">
+                    <p key={i} className="text-[14px] text-white leading-[1.7] mt-1.5 first:mt-0 m-0">
                       {line}
                     </p>
                   ))}
                 </div>
               )}
             </div>
-          </>
+          </Section>
         )}
 
         {/* CONSTRAINTS */}
         {problem.constraints && (
-          <>
-            <h2 className="text-[18px] font-semibold mb-3">Constraints</h2>
-
-            <ul className="space-y-2 mb-6">
+          <Section title="Constraints">
+            <div className="flex flex-col gap-1.5">
               {problem.constraints.map((c, i) => (
-                <li key={i} className="flex items-start gap-2 text-[14px]">
-                  <span className="text-[#6E7681] mt-[2px]">•</span>
-                  <span className="bg-[#2A2A2A] px-2 py-[2px] rounded text-[13px] text-[#C9D1D9]">
+                <div key={i} className="flex items-center gap-2">
+                  <span className="w-1 h-1 rounded-full bg-[#333] shrink-0" />
+                  <code
+                    className="text-[15px] text-[#c9d1d9] bg-[#222] border border-[#2e2e2e] px-2.5 py-0.5 rounded"
+                    style={{ fontFamily: MONO }}
+                  >
                     {c}
-                  </span>
-                </li>
+                  </code>
+                </div>
               ))}
-            </ul>
-          </>
+            </div>
+          </Section>
         )}
 
-        {/* STATS */}
-        <div className="text-[13px] text-[#8B949E] flex gap-6 mb-6 border-t border-[#2A2F3A] pt-4">
-          <span>
-            Accepted {problem.acceptedCount || "—"} /{" "}
-            {problem.totalSubmissions || "—"}
-          </span>
-          <span>Acceptance Rate {problem.acceptance || "—"}%</span>
-        </div>
+        {/* NOTE */}
+        {problem.note && (
+          <div className="px-3.5 py-3 rounded-md bg-[#1e1e1e] border border-[#2a2a2a] border-l-[3px] border-l-[#333] text-[15px] text-[#6a7380] leading-[1.7]">
+            {problem.note}
+          </div>
+        )}
 
-        {/* COLLAPSIBLE SECTIONS */}
-        <Collapse
-          title="Topics"
-          icon="🏷"
-          open={open.topics}
-          onClick={() => toggle("topics")}
-        >
-          {problem.topics?.map((t, i) => (
-            <Chip key={i} text={t} />
-          ))}
-        </Collapse>
-
-        <Collapse
-          title="Companies"
-          icon="🔒"
-          open={open.companies}
-          onClick={() => toggle("companies")}
-        >
-          {problem.companies?.map((c, i) => (
-            <Chip key={i} text={c} highlight />
-          ))}
-        </Collapse>
-
-        {problem.hints?.map((hint, i) => (
-          <Collapse
-            key={i}
-            title={`Hint ${i + 1}`}
-            icon="💡"
-            open={open[`hint${i}`]}
-            onClick={() => toggle(`hint${i}`)}
-          >
-            <p className="text-[14px] text-[#C9D1D9]">{hint}</p>
-          </Collapse>
-        ))}
-
-        <Collapse
-          title="Similar Questions"
-          icon="📋"
-          open={open.similar}
-          onClick={() => toggle("similar")}
-        >
-          {problem.similarQuestions?.map((q, i) => (
-            <div
-              key={i}
-              className="text-[#4FA3FF] text-[14px] hover:underline cursor-pointer"
-            >
-              {q}
-            </div>
-          ))}
-        </Collapse>
       </div>
     </div>
   );
-}
+};
 
-/* ---------- COMPONENTS ---------- */
-
-const Collapse = ({ title, children, onClick, icon, open }) => (
-  <div className="border-t border-[#2A2F3A]">
-    <div
-      onClick={onClick}
-      className="flex items-center justify-between py-4 cursor-pointer group"
-    >
-      <div className="flex items-center gap-3">
-        <span className="text-[16px] text-[#8B949E] group-hover:text-white">
-          {icon}
-        </span>
-        <span className="text-[15px] text-[#C9D1D9] group-hover:text-white">
-          {title}
-        </span>
-      </div>
-
-      <ChevronDown
-        size={16}
-        className={`text-[#6E7681] transition-transform duration-200 ${
-          open ? "rotate-180 text-white" : ""
-        }`}
-      />
-    </div>
-
-    {open && <div className="pb-4 pl-7">{children}</div>}
-  </div>
-);
-
-const CodeBlock = ({ label, value }) => (
-  <div className="mb-4">
-    <div className="text-[#8B949E] text-[12px] mb-1 uppercase tracking-wide">
-      {label}
-    </div>
-    <pre className="bg-[#1E1E1E] border border-[#1E1E1E] rounded-lg px-3 py-2 text-[13px] font-mono whitespace-pre-wrap">
-      {value}
-    </pre>
-  </div>
-);
-
-const Chip = ({ text, highlight }) => (
-  <span
-    className={`inline-block px-2 py-1 rounded-md text-[12px] mr-2 mt-2 ${
-      highlight ? "bg-[#3A2F1C] text-[#FFC01E]" : "bg-[#2A2A2A] text-[#C9D1D9]"
-    }`}
-  >
-    {text}
-  </span>
-);
+export default ProblemPanel;
