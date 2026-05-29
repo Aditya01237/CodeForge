@@ -7,6 +7,7 @@ import (
 
 	"codeforge-judge/models"
 	"codeforge-judge/runner"
+	"codeforge-judge/worker"
 )
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
@@ -25,7 +26,7 @@ func runHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("🔥 Go Judge received request:", req.Language)
+	log.Println("🔥 Direct /run request:", req.Language)
 
 	resp := runner.RunCode(req)
 
@@ -34,6 +35,8 @@ func runHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	go worker.StartRedisWorker()
+
 	http.HandleFunc("/health", healthHandler)
 	http.HandleFunc("/run", runHandler)
 

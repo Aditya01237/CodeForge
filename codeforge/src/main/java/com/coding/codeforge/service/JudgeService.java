@@ -8,10 +8,10 @@ import java.util.*;
 @Service
 public class JudgeService {
 
-    private final GoJudgeClientService goJudgeClientService;
+    private final RedisJudgeClientService redisJudgeClientService;
 
-    public JudgeService(GoJudgeClientService goJudgeClientService) {
-        this.goJudgeClientService = goJudgeClientService;
+    public JudgeService(RedisJudgeClientService redisJudgeClientService) {
+        this.redisJudgeClientService = redisJudgeClientService;
     }
 
     public List<Map<String, Object>> runTestCases(String language, String code, List<TestCase> testCases) {
@@ -21,7 +21,7 @@ public class JudgeService {
 
         for (TestCase tc : testCases) {
 
-            ExecutionResultService res = goJudgeClientService.runCode(language, code, tc.getInput());
+            ExecutionResultService res = redisJudgeClientService.runCode(language, code, tc.getInput());
 
             String verdict = getVerdict(res, tc.getOutput());
 
@@ -45,7 +45,7 @@ public class JudgeService {
 
         for (TestCase tc : testCases) {
 
-            ExecutionResultService res = goJudgeClientService.runCode(language, code, tc.getInput());
+            ExecutionResultService res = redisJudgeClientService.runCode(language, code, tc.getInput());
 
             String verdict = getVerdict(res, tc.getOutput());
 
