@@ -12,12 +12,19 @@ import com.coding.codeforge.data.*;
 @CrossOrigin(origins = "http://localhost:5173")
 public class CodeController {
 
+    private final JudgeService judgeService;
+
+    public CodeController(JudgeService judgeService) {
+        this.judgeService = judgeService;
+    }
+
     @PostMapping("/run")
     public Map<String, Object> runCode(@RequestBody CodeRequest request) {
 
         return Map.of(
                 "status", "Run Success",
-                "results", JudgeService.runTestCases(
+                "results", judgeService.runTestCases(
+                        request.getLanguage(),
                         request.getCode(),
                         ProblemData.getSample(request.getProblemId())
                 )
@@ -27,7 +34,8 @@ public class CodeController {
     @PostMapping("/submit")
     public Map<String, Object> submitCode(@RequestBody CodeRequest request) {
 
-        return JudgeService.submitTestCases(
+        return judgeService.submitTestCases(
+                request.getLanguage(),
                 request.getCode(),
                 ProblemData.getHidden(request.getProblemId())
         );

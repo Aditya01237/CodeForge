@@ -40,7 +40,7 @@ export default function ProblemPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code,
-          language: "cpp",
+          language: getLanguageKey(lang),
           input,
           problemId: problem.id,
         }),
@@ -64,7 +64,7 @@ export default function ProblemPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code,
-          language: "cpp",
+          language: getLanguageKey(lang),
           problemId: problem.id,
         }),
       });
@@ -74,6 +74,13 @@ export default function ProblemPage() {
       setOutput({ status: "Error", message: "Server error ❌" });
     }
     setRunning(false);
+  };
+
+  const getLanguageKey = (lang) => {
+    if (lang === "C++") return "cpp";
+    if (lang === "Python") return "python";
+    if (lang === "Java") return "java";
+    return "cpp";
   };
 
   // Init code + input when lang or problem changes

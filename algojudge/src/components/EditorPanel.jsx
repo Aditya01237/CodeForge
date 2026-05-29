@@ -2,7 +2,7 @@ import { useState } from "react";
 import Editor from "@monaco-editor/react";
 import { STARTERS } from "../data/codeTemplates";
 
-const LANGS = ["C++", "Python", "Java", "JavaScript"];
+const LANGS = ["C++", "Python", "Java"];
 const FONTSIZES = [12, 13, 14, 15, 16, 18, 20];
 
 export default function EditorPanel({ code, setCode, onLangChange }) {
@@ -18,14 +18,14 @@ export default function EditorPanel({ code, setCode, onLangChange }) {
     setOpenMenu(null);
   };
 
-  const monacoLang =
-    lang === "C++"
-      ? "cpp"
-      : lang === "Python"
-        ? "python"
-        : lang === "Java"
-          ? "java"
-          : "javascript";
+  const getLanguageKey = (lang) => {
+    if (lang === "C++") return "cpp";
+    if (lang === "Python") return "python";
+    if (lang === "Java") return "java";
+    return "cpp";
+  };
+
+  const monacoLang = getLanguageKey(lang);
 
   const handleEditorWillMount = (monaco) => {
     monaco.editor.defineTheme("leetcodeDark", {

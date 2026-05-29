@@ -1,31 +1,20 @@
 export const STARTERS = {
-  "C++": `#include <iostream>
+  "C++": `#include <bits/stdc++.h>
 using namespace std;
 
 int main() {
-
-    // start coding here
-
+    // write your code here
     return 0;
 }`,
+
+  "Python": `# write your code here
+`,
 
   "Java": `import java.util.*;
 
 public class Main {
     public static void main(String[] args) {
-
-        // start coding here
-
+        // write your code here
     }
-}`,
-
-  "Python": `def main():
-    
-    # start coding here
-    pass
-
-
-if __name__ == "__main__":
-    main()
-`
+}`
 };

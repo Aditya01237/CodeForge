@@ -1,19 +1,27 @@
 package com.coding.codeforge.service;
 
 import com.coding.codeforge.data.TestCase;
+import org.springframework.stereotype.Service;
 
 import java.util.*;
 
+@Service
 public class JudgeService {
 
-    public static List<Map<String, Object>> runTestCases(String code, List<TestCase> testCases) {
+    private final GoJudgeClientService goJudgeClientService;
+
+    public JudgeService(GoJudgeClientService goJudgeClientService) {
+        this.goJudgeClientService = goJudgeClientService;
+    }
+
+    public List<Map<String, Object>> runTestCases(String language, String code, List<TestCase> testCases) {
 
         List<Map<String, Object>> results = new ArrayList<>();
         int index = 1;
 
         for (TestCase tc : testCases) {
 
-            ExecutionResultService res = CodeExecutorService.runCppCode(code, tc.getInput());
+            ExecutionResultService res = goJudgeClientService.runCode(language, code, tc.getInput());
 
             String verdict = getVerdict(res, tc.getOutput());
 
@@ -31,13 +39,13 @@ public class JudgeService {
         return results;
     }
 
-    public static Map<String, Object> submitTestCases(String code, List<TestCase> testCases) {
+    public Map<String, Object> submitTestCases(String language, String code, List<TestCase> testCases) {
 
         int index = 1;
 
         for (TestCase tc : testCases) {
 
-            ExecutionResultService res = CodeExecutorService.runCppCode(code, tc.getInput());
+            ExecutionResultService res = goJudgeClientService.runCode(language, code, tc.getInput());
 
             String verdict = getVerdict(res, tc.getOutput());
 
@@ -46,8 +54,9 @@ public class JudgeService {
                 return switch (verdict) {
                     case "CE" -> Map.of("status", "Compilation Error", "error", res.getError());
                     case "TLE" -> Map.of("status", "Time Limit Exceeded", "failedTestCase", index);
-                    case "RE" -> Map.of("status", "Runtime Error", "failedTestCase", index);
+                    case "RE" -> Map.of("status", "Runtime Error", "failedTestCase", index, "error", res.getError());
                     case "NO_OUTPUT" -> Map.of("status", "No Output", "failedTestCase", index);
+                    case "UNSUPPORTED_LANGUAGE" -> Map.of("status", "Unsupported Language", "error", res.getError());
                     default -> Map.of(
                             "status", "Wrong Answer",
                             "failedTestCase", index,
@@ -63,12 +72,12 @@ public class JudgeService {
         return Map.of("status", "Accepted");
     }
 
-    // 🔥 CENTRALIZED VERDICT LOGIC
-    private static String getVerdict(ExecutionResultService res, String expectedOutput) {
+    private String getVerdict(ExecutionResultService res, String expectedOutput) {
 
         if (res.getStatus().equals("CE")) return "CE";
         if (res.getStatus().equals("TLE")) return "TLE";
         if (res.getStatus().equals("RE")) return "RE";
+        if (res.getStatus().equals("UNSUPPORTED_LANGUAGE")) return "UNSUPPORTED_LANGUAGE";
 
         String actual = normalize(res.getOutput());
         String expected = normalize(expectedOutput);
@@ -79,7 +88,7 @@ public class JudgeService {
         return "WA";
     }
 
-    private static String normalize(String s) {
+    private String normalize(String s) {
         if (s == null) return "";
         return s.trim().replaceAll("\\r", "");
     }

@@ -25,6 +25,8 @@ func runHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Println("🔥 Go Judge received request:", req.Language)
+
 	resp := runner.RunCode(req)
 
 	w.Header().Set("Content-Type", "application/json")
