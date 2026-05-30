@@ -181,7 +181,7 @@ export default function Dashboard() {
 
   const categories = useMemo(() => {
     const fromProblems = Array.from(
-      new Set(problems.map((p) => p.category).filter(Boolean))
+      new Set(problems.map((p) => p.category).filter(Boolean)),
     );
 
     if (fromProblems.length === 0) return CATEGORY_FALLBACK;
@@ -224,15 +224,15 @@ export default function Dashboard() {
   const hardTotal = problems.filter((p) => p.difficulty === "Hard").length;
 
   const easySolved = problems.filter(
-    (p) => p.difficulty === "Easy" && solved.has(p.id)
+    (p) => p.difficulty === "Easy" && solved.has(p.id),
   ).length;
 
   const mediumSolved = problems.filter(
-    (p) => p.difficulty === "Medium" && solved.has(p.id)
+    (p) => p.difficulty === "Medium" && solved.has(p.id),
   ).length;
 
   const hardSolved = problems.filter(
-    (p) => p.difficulty === "Hard" && solved.has(p.id)
+    (p) => p.difficulty === "Hard" && solved.has(p.id),
   ).length;
 
   const pageBg =
@@ -302,6 +302,12 @@ export default function Dashboard() {
           >
             Join Test
           </button>
+          <button
+            onClick={() => navigate("/faculty")}
+            className="hidden sm:block h-10 px-4 rounded-xl border border-blue-400/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 text-sm font-semibold transition"
+          >
+            Faculty
+          </button>
 
           <div
             className={`w-10 h-10 flex items-center justify-center rounded-full text-xs font-semibold ${
@@ -349,7 +355,9 @@ export default function Dashboard() {
 
               <div className="flex flex-wrap gap-3 mt-8">
                 <button
-                  onClick={() => window.scrollTo({ top: 620, behavior: "smooth" })}
+                  onClick={() =>
+                    window.scrollTo({ top: 620, behavior: "smooth" })
+                  }
                   className="h-12 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition"
                 >
                   Start Practice
@@ -448,7 +456,10 @@ export default function Dashboard() {
             </div>
 
             <div className={`text-sm ${muted}`}>
-              Showing <span className="font-semibold text-blue-400">{filtered.length}</span>{" "}
+              Showing{" "}
+              <span className="font-semibold text-blue-400">
+                {filtered.length}
+              </span>{" "}
               of <span className="font-semibold">{total}</span>
             </div>
           </div>
