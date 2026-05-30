@@ -1,41 +1,39 @@
-package com.coding.codeforge.entity;
-
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import jakarta.persistence.*;
+package com.coding.codeforge.DTO;
 
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "coding_tests")
-public class CodingTest {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
+public class TestAccessResponse {
+    private boolean valid;
+    private Long testId;
     private String title;
-
-    @Column(unique = true)
     private String testCode;
-
-    private String testPassword;
-
-    private Boolean allowExternalParticipants = true;
-
+    private Boolean allowExternalParticipants;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
-
     private Integer durationMinutes;
 
-    @ManyToOne
-    @JoinColumn(name = "created_by")
-    @JsonIgnoreProperties({"password"})
-    private User createdBy;
+    public TestAccessResponse() {}
 
-    public CodingTest() {}
+    public TestAccessResponse(boolean valid, Long testId, String title, String testCode,
+                              Boolean allowExternalParticipants,
+                              LocalDateTime startTime, LocalDateTime endTime,
+                              Integer durationMinutes) {
+        this.valid = valid;
+        this.testId = testId;
+        this.title = title;
+        this.testCode = testCode;
+        this.allowExternalParticipants = allowExternalParticipants;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.durationMinutes = durationMinutes;
+    }
 
-    public Long getId() {
-        return id;
+    public boolean isValid() {
+        return valid;
+    }
+
+    public Long getTestId() {
+        return testId;
     }
 
     public String getTitle() {
@@ -44,10 +42,6 @@ public class CodingTest {
 
     public String getTestCode() {
         return testCode;
-    }
-
-    public String getTestPassword() {
-        return testPassword;
     }
 
     public Boolean getAllowExternalParticipants() {
@@ -66,12 +60,12 @@ public class CodingTest {
         return durationMinutes;
     }
 
-    public User getCreatedBy() {
-        return createdBy;
+    public void setValid(boolean valid) {
+        this.valid = valid;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public void setTestId(Long testId) {
+        this.testId = testId;
     }
 
     public void setTitle(String title) {
@@ -80,10 +74,6 @@ public class CodingTest {
 
     public void setTestCode(String testCode) {
         this.testCode = testCode;
-    }
-
-    public void setTestPassword(String testPassword) {
-        this.testPassword = testPassword;
     }
 
     public void setAllowExternalParticipants(Boolean allowExternalParticipants) {
@@ -100,9 +90,5 @@ public class CodingTest {
 
     public void setDurationMinutes(Integer durationMinutes) {
         this.durationMinutes = durationMinutes;
-    }
-
-    public void setCreatedBy(User createdBy) {
-        this.createdBy = createdBy;
     }
 }

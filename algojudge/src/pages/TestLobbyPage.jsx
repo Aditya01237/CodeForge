@@ -1,24 +1,34 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Home, Moon, Sun, UserRound, GraduationCap, Mail, BadgeCheck } from "lucide-react";
+import { apiGet } from "../api";
+import {
+  Home,
+  Moon,
+  Sun,
+  Clock,
+  Code2,
+  UserRound,
+  PlayCircle,
+  Mail,
+  Phone,
+  GraduationCap,
+  ShieldCheck,
+  ArrowLeft,
+} from "lucide-react";
 
 const MONO = "'JetBrains Mono', 'Fira Code', ui-monospace, monospace";
 
-export default function ParticipantIdentityPage() {
+export default function TestLobbyPage() {
   const { testId } = useParams();
   const navigate = useNavigate();
 
-  const [theme, setTheme] = useState(() => localStorage.getItem("cf_theme") || "dark");
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("cf_theme") || "dark";
+  });
+
   const [test, setTest] = useState(null);
-  const [type, setType] = useState("STUDENT");
-
-  const [rollNumber, setRollNumber] = useState("");
-  const [studentName, setStudentName] = useState("");
-
-  const [externalName, setExternalName] = useState("");
-  const [externalEmail, setExternalEmail] = useState("");
-  const [externalId, setExternalId] = useState("");
-
+  const [participant, setParticipant] = useState(null);
+  const [problems, setProblems] = useState([]);
   const [error, setError] = useState("");
 
   const isDark = theme === "dark";
@@ -34,64 +44,53 @@ export default function ParticipantIdentityPage() {
   }, [theme]);
 
   useEffect(() => {
-    const raw = localStorage.getItem("cf_test_access");
+    const testRaw = localStorage.getItem("cf_test_access");
+    const participantRaw = localStorage.getItem("cf_participant");
 
-    if (!raw) {
+    if (!testRaw) {
       navigate("/test-access");
       return;
     }
 
-    const parsed = JSON.parse(raw);
+    if (!participantRaw) {
+      navigate(`/test/${testId}/identity`);
+      return;
+    }
 
-    if (String(parsed.testId) !== String(testId)) {
+    try {
+      const parsedTest = JSON.parse(testRaw);
+      const parsedParticipant = JSON.parse(participantRaw);
+
+      if (String(parsedTest.testId) !== String(testId)) {
+        navigate("/test-access");
+        return;
+      }
+
+      setTest(parsedTest);
+      setParticipant(parsedParticipant);
+    } catch {
       navigate("/test-access");
       return;
     }
 
-    setTest(parsed);
+    apiGet(`/tests/${testId}/problems`)
+      .then((data) => setProblems(Array.isArray(data) ? data : []))
+      .catch(() => setError("Failed to load test problems."));
   }, [testId, navigate]);
 
-  const handleContinue = (e) => {
-    e.preventDefault();
-    setError("");
-
-    let participant;
-
-    if (type === "STUDENT") {
-      if (!rollNumber.trim()) {
-        setError("Please enter your college roll number.");
-        return;
-      }
-
-      participant = {
-        participantType: "STUDENT",
-        rollNumber: rollNumber.trim(),
-        name: studentName.trim(),
-        email: "",
-        identifier: rollNumber.trim(),
-      };
-    } else {
-      if (!externalName.trim()) {
-        setError("Please enter your name.");
-        return;
-      }
-
-      participant = {
-        participantType: "EXTERNAL",
-        rollNumber: "",
-        name: externalName.trim(),
-        email: externalEmail.trim(),
-        identifier: externalId.trim() || externalEmail.trim() || externalName.trim(),
-      };
-    }
-
-    localStorage.setItem("cf_participant", JSON.stringify(participant));
-    navigate(`/test/${testId}/lobby`);
-  };
-
-  if (!test) {
-    return <div className="min-h-screen bg-[#070B12] text-white p-8">Loading...</div>;
+  if (!test || !participant) {
+    return (
+      <div className="min-h-screen bg-[#070B12] text-white p-8">
+        Loading lobby...
+      </div>
+    );
   }
+
+  const isExternal = participant.participantType === "EXTERNAL";
+
+  const participantName = isExternal
+    ? participant.name
+    : participant.name || participant.rollNumber;
 
   const pageClass = isDark
     ? "bg-[#070B12] text-white"
@@ -105,180 +104,292 @@ export default function ParticipantIdentityPage() {
     ? "bg-[#111827] border-white/10"
     : "bg-white border-slate-200 shadow-sm";
 
-  const inputClass = isDark
-    ? "bg-[#070B12] border-white/10 text-white placeholder:text-slate-600 focus:border-[#58A6FF]"
-    : "bg-white border-slate-200 text-slate-950 placeholder:text-slate-400 focus:border-blue-500";
-
   const softButton = isDark
     ? "border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]"
     : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100";
 
   const muted = isDark ? "text-slate-400" : "text-slate-600";
 
-  const typeCard = (active) =>
-    active
-      ? "border-blue-400 bg-blue-500/10"
-      : isDark
-        ? "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]"
-        : "border-slate-200 bg-white hover:bg-slate-50";
+  const sidePanel = isDark
+    ? "border-white/10 bg-[#090D14]"
+    : "border-slate-200 bg-slate-50";
+
+  const ruleCard = isDark
+    ? "border-white/10 bg-white/[0.03]"
+    : "border-slate-200 bg-white";
 
   return (
     <div className={`min-h-screen ${pageClass}`}>
-      <nav className={`h-16 px-6 flex items-center justify-between border-b ${navClass}`}>
+      {/* NAVBAR */}
+      <nav
+        className={`h-16 px-6 flex items-center justify-between border-b ${navClass}`}
+      >
         <div className="flex items-center gap-4">
           <button
-            onClick={() => navigate("/test-access")}
+            onClick={() => navigate(`/test/${testId}/identity`)}
             className={`h-10 w-10 rounded-xl border flex items-center justify-center transition ${softButton}`}
+            title="Back"
           >
-            <Home size={17} />
+            <ArrowLeft size={17} />
           </button>
 
-          <div className="text-xl font-bold text-[#58A6FF]" style={{ fontFamily: MONO }}>
-            CodeForge
-          </div>
-        </div>
-
-        <button
-          onClick={() => setTheme(isDark ? "light" : "dark")}
-          className={`h-10 px-4 rounded-xl border flex items-center gap-2 text-sm font-semibold transition ${softButton}`}
-        >
-          {isDark ? <Sun size={15} /> : <Moon size={15} />}
-          {isDark ? "Light" : "Dark"}
-        </button>
-      </nav>
-
-      <main className="max-w-5xl mx-auto px-6 py-10">
-        <div className="mb-8">
-          <div
-            className="text-xs uppercase tracking-[0.25em] text-[#58A6FF] mb-3"
+          <button
+            onClick={() => navigate("/")}
+            className="text-xl font-bold text-[#58A6FF]"
             style={{ fontFamily: MONO }}
           >
-            Participant Identity
-          </div>
-
-          <h1 className="text-4xl font-black mb-2">{test.title}</h1>
-
-          <p className={muted}>
-            Test ID:{" "}
-            <span className="font-mono text-[#58A6FF]">{test.testCode}</span>
-          </p>
+            CodeForge
+          </button>
         </div>
 
-        <form onSubmit={handleContinue} className={`rounded-3xl border p-7 ${cardClass}`}>
-          <h2 className="text-2xl font-bold mb-5">Who is giving this test?</h2>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate("/")}
+            className={`hidden sm:flex h-10 px-4 rounded-xl border items-center gap-2 text-sm font-semibold transition ${softButton}`}
+          >
+            <Home size={15} />
+            Home
+          </button>
 
-          <div className="grid md:grid-cols-2 gap-4 mb-7">
-            <button
-              type="button"
-              onClick={() => setType("STUDENT")}
-              className={`text-left rounded-2xl border p-5 transition ${typeCard(type === "STUDENT")}`}
-            >
-              <GraduationCap className="text-[#58A6FF] mb-4" size={26} />
-              <div className="font-bold text-lg mb-1">College Student</div>
-              <div className={`text-sm leading-6 ${muted}`}>
-                Use college roll number for attendance and result tracking.
-              </div>
-            </button>
+          <button
+            onClick={() => setTheme(isDark ? "light" : "dark")}
+            className={`h-10 px-4 rounded-xl border flex items-center gap-2 text-sm font-semibold transition ${softButton}`}
+          >
+            {isDark ? <Sun size={15} /> : <Moon size={15} />}
+            {isDark ? "Light" : "Dark"}
+          </button>
+        </div>
+      </nav>
 
-            <button
-              type="button"
-              onClick={() => setType("EXTERNAL")}
-              className={`text-left rounded-2xl border p-5 transition ${typeCard(type === "EXTERNAL")}`}
+      <main className="max-w-6xl mx-auto px-6 py-10">
+        <div className={`rounded-3xl border overflow-hidden ${cardClass}`}>
+          {/* HEADER */}
+          <div
+            className={`p-8 border-b ${
+              isDark ? "border-white/10" : "border-slate-200"
+            }`}
+          >
+            <div
+              className="text-xs uppercase tracking-[0.25em] text-[#58A6FF] mb-3"
+              style={{ fontFamily: MONO }}
             >
-              <UserRound className="text-[#58A6FF] mb-4" size={26} />
-              <div className="font-bold text-lg mb-1">External Participant</div>
-              <div className={`text-sm leading-6 ${muted}`}>
-                Use name/email for public contests or mock assessments.
-              </div>
-            </button>
+              Test Lobby
+            </div>
+
+            <h1 className="text-4xl font-black mb-3">{test.title}</h1>
+
+            <p className={`max-w-2xl leading-7 mb-5 ${muted}`}>
+              Review the test rules and your participant details before
+              starting. Once you start, you will be taken to the problem list.
+            </p>
+
+            <div className="flex flex-wrap gap-3 text-sm">
+              <span className={`px-3 py-1 rounded-full border ${softButton}`}>
+                Test ID:{" "}
+                <span className="font-mono text-[#58A6FF]">
+                  {test.testCode}
+                </span>
+              </span>
+
+              <span className={`px-3 py-1 rounded-full border ${softButton}`}>
+                Duration: {test.durationMinutes || 90} min
+              </span>
+
+              <span className={`px-3 py-1 rounded-full border ${softButton}`}>
+                Problems: {problems.length}
+              </span>
+
+              <span className={`px-3 py-1 rounded-full border ${softButton}`}>
+                Languages: C++, Python, Java
+              </span>
+
+              <span className={`px-3 py-1 rounded-full border ${softButton}`}>
+                Type: {isExternal ? "External/Public" : "College-only"}
+              </span>
+            </div>
           </div>
 
-          {type === "STUDENT" ? (
-            <div className="grid md:grid-cols-2 gap-4">
-              <label>
-                <span className="text-xs uppercase tracking-[0.18em] text-slate-500 mb-2 block" style={{ fontFamily: MONO }}>
-                  College Roll No.
-                </span>
-                <input
-                  value={rollNumber}
-                  onChange={(e) => setRollNumber(e.target.value.toUpperCase())}
-                  placeholder="MT2025015"
-                  className={`w-full h-12 rounded-xl border px-4 outline-none transition ${inputClass}`}
-                  style={{ fontFamily: MONO }}
-                />
-              </label>
+          <div className="grid lg:grid-cols-[1fr_380px]">
+            {/* RULES */}
+            <section className="p-8">
+              <h2 className="text-2xl font-bold mb-5">
+                Rules before starting
+              </h2>
 
-              <label>
-                <span className="text-xs uppercase tracking-[0.18em] text-slate-500 mb-2 block" style={{ fontFamily: MONO }}>
-                  Name Optional
-                </span>
-                <input
-                  value={studentName}
-                  onChange={(e) => setStudentName(e.target.value)}
-                  placeholder="Aditya Pareek"
-                  className={`w-full h-12 rounded-xl border px-4 outline-none transition ${inputClass}`}
-                />
-              </label>
-            </div>
-          ) : (
-            <div className="grid md:grid-cols-2 gap-4">
-              <label>
-                <span className="text-xs uppercase tracking-[0.18em] text-slate-500 mb-2 block" style={{ fontFamily: MONO }}>
-                  Name
-                </span>
-                <input
-                  value={externalName}
-                  onChange={(e) => setExternalName(e.target.value)}
-                  placeholder="Rahul Sharma"
-                  className={`w-full h-12 rounded-xl border px-4 outline-none transition ${inputClass}`}
-                />
-              </label>
+              <div className="grid md:grid-cols-2 gap-4">
+                {[
+                  {
+                    icon: <Code2 size={18} />,
+                    title: "Run vs Submit",
+                    desc: "Run checks sample cases. Submit evaluates hidden test cases.",
+                  },
+                  {
+                    icon: <ShieldCheck size={18} />,
+                    title: "Hidden Tests",
+                    desc: "Final result depends on hidden test cases, not only samples.",
+                  },
+                  {
+                    icon: <Clock size={18} />,
+                    title: "Timer",
+                    desc: "Complete the test within the given duration.",
+                  },
+                  {
+                    icon: <UserRound size={18} />,
+                    title: "Identity",
+                    desc: "Your submissions will be mapped to the details shown here.",
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.title}
+                    className={`rounded-2xl border p-5 ${ruleCard}`}
+                  >
+                    <div className="text-[#58A6FF] mb-3">{item.icon}</div>
+                    <div className="font-bold mb-1">{item.title}</div>
+                    <div className={`text-sm leading-6 ${muted}`}>
+                      {item.desc}
+                    </div>
+                  </div>
+                ))}
+              </div>
 
-              <label>
-                <span className="text-xs uppercase tracking-[0.18em] text-slate-500 mb-2 block" style={{ fontFamily: MONO }}>
-                  Email Optional
-                </span>
-                <div className="relative">
-                  <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-                  <input
-                    value={externalEmail}
-                    onChange={(e) => setExternalEmail(e.target.value)}
-                    placeholder="rahul@example.com"
-                    className={`w-full h-12 rounded-xl border pl-11 pr-4 outline-none transition ${inputClass}`}
-                  />
+              <div className="mt-7 space-y-3">
+                {[
+                  "Do not refresh or close the test page during the test.",
+                  "Java submissions must use public class Main.",
+                  "Do not share your test credentials with others.",
+                  "Only your latest/best submission will be considered later based on faculty policy.",
+                ].map((rule) => (
+                  <div key={rule} className={`flex gap-3 ${muted}`}>
+                    <span className="text-[#58A6FF]">›</span>
+                    <span>{rule}</span>
+                  </div>
+                ))}
+              </div>
+
+              {error && (
+                <div className="mt-6 rounded-xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm text-rose-500">
+                  {error}
                 </div>
-              </label>
+              )}
+            </section>
 
-              <label className="md:col-span-2">
-                <span className="text-xs uppercase tracking-[0.18em] text-slate-500 mb-2 block" style={{ fontFamily: MONO }}>
-                  Custom Identifier Optional
-                </span>
-                <input
-                  value={externalId}
-                  onChange={(e) => setExternalId(e.target.value)}
-                  placeholder="company-id / phone / custom-id"
-                  className={`w-full h-12 rounded-xl border px-4 outline-none transition ${inputClass}`}
-                />
-              </label>
-            </div>
-          )}
+            {/* SUMMARY */}
+            <aside className={`p-8 border-l ${sidePanel}`}>
+              <h2 className="text-xl font-bold mb-5">Test Summary</h2>
 
-          {error && (
-            <div className="mt-5 rounded-xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm text-rose-500">
-              {error}
-            </div>
-          )}
+              <div className="space-y-5 text-sm">
+                <div className="flex items-start gap-3">
+                  {isExternal ? (
+                    <UserRound className="text-[#58A6FF] mt-0.5" size={18} />
+                  ) : (
+                    <GraduationCap
+                      className="text-[#58A6FF] mt-0.5"
+                      size={18}
+                    />
+                  )}
 
-          <div className="mt-7 flex justify-end">
-            <button
-              type="submit"
-              className="h-12 px-7 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition flex items-center gap-2"
-            >
-              <BadgeCheck size={17} />
-              Continue to Lobby
-            </button>
+                  <div>
+                    <div className="text-slate-500 uppercase text-xs tracking-widest">
+                      Participant
+                    </div>
+                    <div className="font-semibold mt-1">
+                      {participantName || "Participant"}
+                    </div>
+                  </div>
+                </div>
+
+                {!isExternal && (
+                  <div className="flex items-start gap-3">
+                    <GraduationCap
+                      className="text-[#58A6FF] mt-0.5"
+                      size={18}
+                    />
+
+                    <div>
+                      <div className="text-slate-500 uppercase text-xs tracking-widest">
+                        Roll Number
+                      </div>
+                      <div className="font-mono font-semibold mt-1">
+                        {participant.rollNumber}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {isExternal && (
+                  <>
+                    <div className="flex items-start gap-3">
+                      <Mail className="text-[#58A6FF] mt-0.5" size={18} />
+
+                      <div>
+                        <div className="text-slate-500 uppercase text-xs tracking-widest">
+                          Email
+                        </div>
+                        <div className="font-semibold mt-1 break-all">
+                          {participant.email || "—"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <Phone className="text-[#58A6FF] mt-0.5" size={18} />
+
+                      <div>
+                        <div className="text-slate-500 uppercase text-xs tracking-widest">
+                          Phone
+                        </div>
+                        <div className="font-semibold mt-1">
+                          {participant.identifier || "—"}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <div className="flex items-start gap-3">
+                  <Clock className="text-[#58A6FF] mt-0.5" size={18} />
+
+                  <div>
+                    <div className="text-slate-500 uppercase text-xs tracking-widest">
+                      Duration
+                    </div>
+                    <div className="font-semibold mt-1">
+                      {test.durationMinutes || 90} minutes
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Code2 className="text-[#58A6FF] mt-0.5" size={18} />
+
+                  <div>
+                    <div className="text-slate-500 uppercase text-xs tracking-widest">
+                      Problems
+                    </div>
+                    <div className="font-semibold mt-1">
+                      {problems.length}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => navigate(`/test/${testId}/problems`)}
+                className="mt-8 w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition flex items-center justify-center gap-2"
+              >
+                <PlayCircle size={18} />
+                Start Test
+              </button>
+
+              <button
+                onClick={() => navigate(`/test/${testId}/identity`)}
+                className={`mt-3 w-full h-11 rounded-xl border font-semibold transition ${softButton}`}
+              >
+                Edit Details
+              </button>
+            </aside>
           </div>
-        </form>
+        </div>
       </main>
     </div>
   );

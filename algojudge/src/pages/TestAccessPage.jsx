@@ -1,14 +1,24 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiGet } from "../api";
-import { ArrowRight, KeyRound, Lock, ShieldCheck, Home, Sun, Moon } from "lucide-react";
+import { apiPost } from "../api";
+import {
+  ArrowRight,
+  KeyRound,
+  Lock,
+  ShieldCheck,
+  Home,
+  Sun,
+  Moon,
+} from "lucide-react";
 
 const MONO = "'JetBrains Mono', 'Fira Code', ui-monospace, monospace";
 
 export default function TestAccessPage() {
   const navigate = useNavigate();
 
-  const [theme, setTheme] = useState(() => localStorage.getItem("cf_theme") || "dark");
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem("cf_theme") || "dark",
+  );
   const [testCode, setTestCode] = useState("");
   const [testPassword, setTestPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -45,24 +55,31 @@ export default function TestAccessPage() {
     try {
       // Current backend validates only testCode.
       // Later we will replace this with POST /api/tests/verify-access.
-      const test = await apiGet(`/tests/join/${testCode.trim()}`);
+      const test = await apiPost("/tests/verify-access", {
+        testCode: testCode.trim(),
+        testPassword: testPassword.trim(),
+      });
 
       localStorage.setItem(
         "cf_test_access",
         JSON.stringify({
-          testId: test.id,
+          testId: test.testId,
           testCode: test.testCode,
-          testPassword,
           title: test.title,
           durationMinutes: test.durationMinutes,
           startTime: test.startTime,
           endTime: test.endTime,
-        })
+          allowExternalParticipants: test.allowExternalParticipants,
+        }),
       );
 
-      navigate(`/test/${test.id}/identity`);
+      navigate(`/test/${test.testId}/identity`);
     } catch (err) {
-      setError("Invalid test ID, or the test is not active yet.");
+      setError(
+        err.message?.includes("Invalid")
+          ? "Invalid test ID or password."
+          : "Invalid test ID, password, or test is not active.",
+      );
     } finally {
       setLoading(false);
     }
@@ -92,7 +109,9 @@ export default function TestAccessPage() {
 
   return (
     <div className={`min-h-screen ${pageClass}`}>
-      <nav className={`h-16 px-6 flex items-center justify-between border-b ${navClass}`}>
+      <nav
+        className={`h-16 px-6 flex items-center justify-between border-b ${navClass}`}
+      >
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate("/")}
@@ -147,7 +166,10 @@ export default function TestAccessPage() {
                 ["02", "Verify identity"],
                 ["03", "Start test"],
               ].map(([num, label]) => (
-                <div key={num} className={`rounded-2xl border p-5 ${cardClass}`}>
+                <div
+                  key={num}
+                  className={`rounded-2xl border p-5 ${cardClass}`}
+                >
                   <div className="text-2xl font-bold text-[#58A6FF]">{num}</div>
                   <div className={`text-sm mt-2 ${muted}`}>{label}</div>
                 </div>
@@ -155,7 +177,10 @@ export default function TestAccessPage() {
             </div>
           </section>
 
-          <form onSubmit={handleContinue} className={`rounded-3xl border p-7 ${cardClass}`}>
+          <form
+            onSubmit={handleContinue}
+            className={`rounded-3xl border p-7 ${cardClass}`}
+          >
             <div className="h-12 w-12 rounded-2xl bg-blue-500/10 text-[#58A6FF] flex items-center justify-center mb-5">
               <ShieldCheck size={24} />
             </div>
@@ -174,7 +199,10 @@ export default function TestAccessPage() {
               </span>
 
               <div className="relative">
-                <KeyRound size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                <KeyRound
+                  size={17}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
+                />
                 <input
                   value={testCode}
                   onChange={(e) => setTestCode(e.target.value.toUpperCase())}
@@ -194,7 +222,10 @@ export default function TestAccessPage() {
               </span>
 
               <div className="relative">
-                <Lock size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                <Lock
+                  size={17}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
+                />
                 <input
                   type="password"
                   value={testPassword}

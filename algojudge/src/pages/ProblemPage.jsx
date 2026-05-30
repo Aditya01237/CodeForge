@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { apiGet, apiPost } from "../api";
 
 import TopBar from "../components/TopBar";
@@ -14,6 +14,12 @@ export default function ProblemPage() {
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem("cf_theme") || "dark";
   });
+
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const mode = searchParams.get("mode") || "practice";
+  const testId = searchParams.get("testId");
 
   const [problem, setProblem] = useState(null);
   const [sampleTests, setSampleTests] = useState([]);
@@ -48,6 +54,22 @@ export default function ProblemPage() {
     if (selectedLang === "Python") return "python";
     if (selectedLang === "Java") return "java";
     return "cpp";
+  };
+
+  const isTestExpired = () => {
+    if (mode !== "test") return false;
+
+    const raw = localStorage.getItem("cf_test_access");
+    if (!raw) return true;
+
+    try {
+      const test = JSON.parse(raw);
+      if (!test.endTime) return false;
+
+      return Date.now() >= new Date(test.endTime).getTime();
+    } catch {
+      return true;
+    }
   };
 
   useEffect(() => {
@@ -91,7 +113,48 @@ export default function ProblemPage() {
     setCode(STARTERS[lang] || "");
   }, [lang]);
 
+  const saveTestProblemStatus = (problemId, resultStatus) => {
+    if (mode !== "test" || !testId || !problemId) return;
+
+    const key = `cf_test_problem_status_${testId}`;
+    const raw = localStorage.getItem(key);
+
+    let current = {};
+
+    try {
+      current = raw ? JSON.parse(raw) : {};
+    } catch {
+      current = {};
+    }
+
+    const normalized = String(resultStatus || "").toUpperCase();
+
+    const accepted =
+      normalized === "ACCEPTED" ||
+      normalized === "OK" ||
+      normalized === "PASS" ||
+      normalized === "PASSED";
+
+    current[String(problemId)] = accepted ? "ACCEPTED" : "ATTEMPTED";
+
+    localStorage.setItem(key, JSON.stringify(current));
+
+    window.dispatchEvent(new Event("storage"));
+  };
+
   const handleRun = async () => {
+    if (isTestExpired()) {
+      setOutput({
+        status: "Error",
+        message: "Test time is over. Submissions are closed.",
+      });
+
+      if (testId) {
+        navigate(`/test/${testId}/problems`);
+      }
+
+      return;
+    }
     if (!problem?.id) return;
 
     setRunning(true);
@@ -117,6 +180,18 @@ export default function ProblemPage() {
   };
 
   const handleSubmit = async () => {
+    if (isTestExpired()) {
+      setOutput({
+        status: "Error",
+        message: "Test time is over. Submissions are closed.",
+      });
+
+      if (testId) {
+        navigate(`/test/${testId}/problems`);
+      }
+
+      return;
+    }
     if (!problem?.id) return;
 
     setRunning(true);
@@ -130,11 +205,13 @@ export default function ProblemPage() {
       });
 
       setOutput(data);
+      saveTestProblemStatus(problem.id, data.status);
     } catch (err) {
       setOutput({
         status: "Error",
         message: err.message || "Server error ❌",
       });
+      saveTestProblemStatus(problem.id, "ATTEMPTED");
     } finally {
       setRunning(false);
     }

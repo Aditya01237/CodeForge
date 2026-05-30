@@ -1,8 +1,8 @@
 package com.coding.codeforge.controller;
 
-import com.coding.codeforge.DTO.AddProblemToTestRequest;
-import com.coding.codeforge.DTO.CodingTestRequest;
+import com.coding.codeforge.DTO.*;
 import com.coding.codeforge.entity.CodingTest;
+import com.coding.codeforge.entity.TestParticipant;
 import com.coding.codeforge.entity.TestProblem;
 import com.coding.codeforge.service.CodingTestService;
 import org.springframework.web.bind.annotation.*;
@@ -51,5 +51,23 @@ public class CodingTestController {
     @GetMapping("/tests/join/{testCode}")
     public CodingTest joinTest(@PathVariable String testCode) {
         return codingTestService.joinTestByCode(testCode);
+    }
+
+    @PostMapping("/tests/verify-access")
+    public TestAccessResponse verifyAccess(@RequestBody TestAccessRequest request) {
+        return codingTestService.verifyAccess(request);
+    }
+
+    @PostMapping("/tests/{testId}/participants")
+    public ParticipantResponse registerParticipant(
+            @PathVariable Long testId,
+            @RequestBody ParticipantRequest request
+    ) {
+        return codingTestService.registerParticipant(testId, request);
+    }
+
+    @GetMapping("/faculty/tests/{testId}/participants")
+    public List<TestParticipant> getParticipantsForTest(@PathVariable Long testId) {
+        return codingTestService.getParticipantsForTest(testId);
     }
 }
