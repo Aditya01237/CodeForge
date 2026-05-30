@@ -2,10 +2,10 @@ package com.coding.codeforge.controller;
 
 import com.coding.codeforge.DTO.CodeRequest;
 import com.coding.codeforge.service.JudgeService;
+import com.coding.codeforge.service.TestCaseService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
-import com.coding.codeforge.data.*;
 
 @RestController
 @RequestMapping("/api")
@@ -13,9 +13,12 @@ import com.coding.codeforge.data.*;
 public class CodeController {
 
     private final JudgeService judgeService;
+    private final TestCaseService testCaseService;
 
-    public CodeController(JudgeService judgeService) {
+    public CodeController(JudgeService judgeService,
+                          TestCaseService testCaseService) {
         this.judgeService = judgeService;
+        this.testCaseService = testCaseService;
     }
 
     @PostMapping("/run")
@@ -26,7 +29,7 @@ public class CodeController {
                 "results", judgeService.runTestCases(
                         request.getLanguage(),
                         request.getCode(),
-                        ProblemData.getSample(request.getProblemId())
+                        testCaseService.getSampleTestCases(request.getProblemId())
                 )
         );
     }
@@ -37,7 +40,7 @@ public class CodeController {
         return judgeService.submitTestCases(
                 request.getLanguage(),
                 request.getCode(),
-                ProblemData.getHidden(request.getProblemId())
+                testCaseService.getHiddenTestCases(request.getProblemId())
         );
     }
 }

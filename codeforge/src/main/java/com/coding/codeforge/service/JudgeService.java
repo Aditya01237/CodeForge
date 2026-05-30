@@ -1,6 +1,6 @@
 package com.coding.codeforge.service;
 
-import com.coding.codeforge.data.TestCase;
+import com.coding.codeforge.entity.TestCaseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -14,23 +14,27 @@ public class JudgeService {
         this.redisJudgeClientService = redisJudgeClientService;
     }
 
-    public List<Map<String, Object>> runTestCases(String language, String code, List<TestCase> testCases) {
+    public List<Map<String, Object>> runTestCases(String language, String code, List<TestCaseEntity> testCases) {
 
         List<Map<String, Object>> results = new ArrayList<>();
         int index = 1;
 
-        for (TestCase tc : testCases) {
+        for (TestCaseEntity tc : testCases) {
 
-            ExecutionResultService res = redisJudgeClientService.runCode(language, code, tc.getInput());
+            ExecutionResultService res = redisJudgeClientService.runCode(
+                    language,
+                    code,
+                    tc.getInputData()
+            );
 
-            String verdict = getVerdict(res, tc.getOutput());
+            String verdict = getVerdict(res, tc.getExpectedOutput());
 
             results.add(Map.of(
                     "testCase", "Test Case " + index,
                     "status", verdict,
                     "output", res.getOutput(),
                     "error", res.getError(),
-                    "expected", tc.getOutput()
+                    "expected", tc.getExpectedOutput()
             ));
 
             index++;
@@ -39,15 +43,19 @@ public class JudgeService {
         return results;
     }
 
-    public Map<String, Object> submitTestCases(String language, String code, List<TestCase> testCases) {
+    public Map<String, Object> submitTestCases(String language, String code, List<TestCaseEntity> testCases) {
 
         int index = 1;
 
-        for (TestCase tc : testCases) {
+        for (TestCaseEntity tc : testCases) {
 
-            ExecutionResultService res = redisJudgeClientService.runCode(language, code, tc.getInput());
+            ExecutionResultService res = redisJudgeClientService.runCode(
+                    language,
+                    code,
+                    tc.getInputData()
+            );
 
-            String verdict = getVerdict(res, tc.getOutput());
+            String verdict = getVerdict(res, tc.getExpectedOutput());
 
             if (!verdict.equals("OK")) {
 
@@ -61,7 +69,7 @@ public class JudgeService {
                             "status", "Wrong Answer",
                             "failedTestCase", index,
                             "output", res.getOutput(),
-                            "expected", tc.getOutput()
+                            "expected", tc.getExpectedOutput()
                     );
                 };
             }
