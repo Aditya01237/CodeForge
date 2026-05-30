@@ -1,120 +1,169 @@
 import {
-  ChevronLeft,
-  ChevronRight,
-  Shuffle,
+  Home,
   Play,
-  UploadCloud,
-  User
+  Send,
+  User,
+  Clock,
+  Sun,
+  Moon,
 } from "lucide-react";
 
-import { useNavigate } from "react-router-dom";
-import { useParams } from "react-router-dom";
- 
-const TopNavbar = ({
-  problem,
-  lang,
+import { useNavigate, useSearchParams } from "react-router-dom";
+
+const MONO = "'JetBrains Mono', 'Fira Code', ui-monospace, monospace";
+
+export default function TopBar({
   onRun,
   onSubmit,
   running = false,
-}) => {
+  theme = "dark",
+  setTheme,
+}) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  const { id } = useParams();
-  const currId = Number(id);
+  const mode = searchParams.get("mode") || "practice";
+  const testId = searchParams.get("testId");
 
-  const nextQuestion = () => {
-    const newId = currId+1;
-    if(newId <= 2)navigate(`/problem/${newId}`);
+  let participant = null;
+
+  try {
+    participant = JSON.parse(localStorage.getItem("cf_participant") || "null");
+  } catch {
+    participant = null;
   }
-  const prevQuestion = (id) => {
-    const newId = currId-1;
-    if(newId >= 1)navigate(`/problem/${newId}`);
-  }
 
+  const isDark = theme === "dark";
+
+  const goBack = () => {
+    if (mode === "test" && testId) {
+      navigate(`/test/${testId}/problems`);
+      return;
+    }
+
+    navigate("/");
+  };
+
+  const participantLabel =
+    participant?.participantType === "STUDENT"
+      ? participant.rollNumber
+      : participant?.name || "Guest";
+
+  const wrapperClass = isDark
+    ? "bg-[#0D1117] border-white/10 text-white"
+    : "bg-white border-slate-200 text-slate-950";
+
+  const softButtonClass = isDark
+    ? "border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/[0.08] hover:text-white"
+    : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-slate-950";
 
   return (
-    <div className="h-14 relative flex items-center px-4 bg-[#000000]">
-
+    <div
+      className={`h-16 shrink-0 border-b px-5 flex items-center justify-between ${wrapperClass}`}
+    >
       {/* LEFT */}
-      <div className="flex items-center gap-3">
-        
-        {/* CodeForge Logo */}
-        <span className="text-lg font-semibold text-[#58A6FF] font-mono">
+      <div className="flex items-center gap-4">
+        <button
+          onClick={goBack}
+          className={`h-10 w-10 rounded-xl border flex items-center justify-center transition ${softButtonClass}`}
+          title="Back"
+        >
+          <Home size={17} />
+        </button>
+
+        <button
+          onClick={() => navigate("/")}
+          className="text-[21px] font-bold tracking-wide text-[#58A6FF]"
+          style={{ fontFamily: MONO }}
+        >
           CodeForge
-        </span>
-
-        <div className="w-px h-5 bg-[#2A2F3A]" />
-
-        {/* Problem Info */}
-        {problem && (
-          <>
-            <span className="text-sm text-[#C9D1D9] font-medium">
-              {problem.title}
-            </span>
-
-            <div className="flex items-center gap-2 text-[#8B949E] ml-2">
-              <ChevronLeft onClick={prevQuestion} size={18} className="cursor-pointer hover:text-white" />
-              <ChevronRight onClick={nextQuestion} size={18} className="cursor-pointer hover:text-white" />
-              <Shuffle size={18} className="cursor-pointer hover:text-white" />
-            </div>
-          </>
-        )}
+        </button>
       </div>
 
       {/* CENTER */}
-      <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
-        
-        {/* RUN */}
+      <div className="flex items-center gap-3">
         <button
           onClick={onRun}
           disabled={running}
-          className={`flex items-center gap-1 px-3 py-1.5 rounded-md 
-            bg-[#161B22] border border-[#30363D] transition
-            ${
-              running
-                ? "opacity-50 cursor-not-allowed text-[#8B949E]"
-                : "text-[#C9D1D9] hover:border-[#58A6FF] hover:text-[#58A6FF]"
-            }`}
+          className={`h-10 min-w-[92px] px-5 rounded-xl border flex items-center justify-center gap-2 text-sm font-semibold transition ${
+            running
+              ? "opacity-60 cursor-not-allowed border-white/10 bg-white/[0.03] text-slate-400"
+              : isDark
+                ? "border-white/10 bg-white/[0.04] text-slate-200 hover:border-[#58A6FF]/60 hover:text-[#58A6FF]"
+                : "border-slate-200 bg-white text-slate-700 hover:border-blue-400 hover:text-blue-600"
+          }`}
         >
           {running ? (
-            <span className="w-3 h-3 border-2 border-[#30363D] border-t-[#58A6FF] rounded-full animate-spin" />
+            <span className="w-4 h-4 border-2 border-white/20 border-t-[#58A6FF] rounded-full animate-spin" />
           ) : (
-            <Play size={14} />
+            <Play size={15} />
           )}
-          <span className="text-sm">
-            {running ? "Running" : "Run"}
-          </span>
+
+          <span>{running ? "Running" : "Run"}</span>
         </button>
 
-        {/* SUBMIT */}
         <button
           onClick={onSubmit}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-md 
-            bg-[#161B22] text-[#3FB950] border border-[#30363D]
-            hover:bg-[#1F2937] transition"
+          disabled={running}
+          className={`h-10 min-w-[110px] px-5 rounded-xl border flex items-center justify-center gap-2 text-sm font-semibold transition disabled:opacity-60 ${
+            isDark
+              ? "bg-emerald-500/10 border-emerald-400/30 text-emerald-300 hover:bg-emerald-500/20"
+              : "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+          }`}
         >
-          <UploadCloud size={14} />
-          <span className="text-sm font-medium">Submit</span>
+          <Send size={15} />
+          <span>Submit</span>
         </button>
-
       </div>
 
       {/* RIGHT */}
-      <div className="ml-auto flex items-center gap-3 text-[#8B949E]">
-        {/* Avatar */}
-        <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-600">
-          <User size={16} />
-        </div>
+      <div className="flex items-center justify-end gap-3">
+        {mode === "test" && (
+          <div
+            className={`h-10 px-3 rounded-xl border hidden sm:flex items-center gap-2 text-sm ${
+              isDark
+                ? "border-amber-400/20 bg-amber-400/10 text-amber-300"
+                : "border-amber-200 bg-amber-50 text-amber-700"
+            }`}
+          >
+            <Clock size={15} />
+            <span style={{ fontFamily: MONO }}>90:00</span>
+          </div>
+        )}
 
-        {/* Premium */}
-        <button className="px-3 py-1.5 rounded-md 
-          bg-[#2A1F0F] text-[#F59E0B] text-sm font-medium
-          hover:bg-[#3A2A15] transition">
-          Premium
+        <button
+          onClick={() => setTheme?.(isDark ? "light" : "dark")}
+          className={`h-10 px-4 rounded-xl border flex items-center gap-2 text-sm font-semibold transition ${softButtonClass}`}
+          title="Toggle theme"
+        >
+          {isDark ? <Sun size={15} /> : <Moon size={15} />}
+          <span>{isDark ? "Light" : "Dark"}</span>
         </button>
+
+        <div
+          className={`h-10 px-3 rounded-xl border hidden md:flex items-center gap-2 max-w-[150px] ${
+            isDark
+              ? "border-white/10 bg-white/[0.04]"
+              : "border-slate-200 bg-slate-50"
+          }`}
+        >
+          <div
+            className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
+              isDark ? "bg-white/10" : "bg-white border border-slate-200"
+            }`}
+          >
+            <User size={15} />
+          </div>
+
+          <span
+            className={`text-sm truncate ${
+              isDark ? "text-slate-300" : "text-slate-700"
+            }`}
+          >
+            {mode === "test" ? participantLabel : "Practice"}
+          </span>
+        </div>
       </div>
     </div>
   );
-};
-
-export default TopNavbar;
+}

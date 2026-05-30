@@ -1,186 +1,204 @@
 import { useState, useEffect } from "react";
 
-const ACCENT = "#4D9EFF";
+const MONO = "'JetBrains Mono', 'Fira Code', ui-monospace, monospace";
+const SANS = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
-const Label = ({ children }) => (
+const normalizeStatus = (status) => {
+  if (!status) return "UNKNOWN";
+  if (status === "OK") return "ACCEPTED";
+  if (status === "Accepted") return "ACCEPTED";
+  if (status === "WA") return "WRONG_ANSWER";
+  if (status === "Wrong Answer") return "WRONG_ANSWER";
+  if (status === "CE" || status === "Compilation Error") return "COMPILE_ERROR";
+  if (status === "TLE" || status === "Time Limit Exceeded") return "TLE";
+  if (status === "RE" || status === "Runtime Error") return "RUNTIME_ERROR";
+  if (status === "NO_OUTPUT" || status === "No Output") return "NO_OUTPUT";
+  return status;
+};
+
+const statusMeta = (status) => {
+  const normalized = normalizeStatus(status);
+
+  switch (normalized) {
+    case "ACCEPTED":
+      return {
+        label: "Accepted",
+        color: "text-emerald-600 dark:text-emerald-300",
+        bg: "bg-emerald-50 dark:bg-emerald-400/10",
+        border: "border-emerald-200 dark:border-emerald-400/20",
+        dot: "bg-emerald-500",
+      };
+
+    case "WRONG_ANSWER":
+      return {
+        label: "Wrong Answer",
+        color: "text-rose-600 dark:text-rose-300",
+        bg: "bg-rose-50 dark:bg-rose-400/10",
+        border: "border-rose-200 dark:border-rose-400/20",
+        dot: "bg-rose-500",
+      };
+
+    case "COMPILE_ERROR":
+      return {
+        label: "Compile Error",
+        color: "text-amber-700 dark:text-amber-300",
+        bg: "bg-amber-50 dark:bg-amber-400/10",
+        border: "border-amber-200 dark:border-amber-400/20",
+        dot: "bg-amber-500",
+      };
+
+    case "TLE":
+      return {
+        label: "Time Limit Exceeded",
+        color: "text-orange-700 dark:text-orange-300",
+        bg: "bg-orange-50 dark:bg-orange-400/10",
+        border: "border-orange-200 dark:border-orange-400/20",
+        dot: "bg-orange-500",
+      };
+
+    case "RUNTIME_ERROR":
+      return {
+        label: "Runtime Error",
+        color: "text-red-700 dark:text-red-300",
+        bg: "bg-red-50 dark:bg-red-400/10",
+        border: "border-red-200 dark:border-red-400/20",
+        dot: "bg-red-500",
+      };
+
+    case "NO_OUTPUT":
+      return {
+        label: "No Output",
+        color: "text-rose-600 dark:text-rose-300",
+        bg: "bg-rose-50 dark:bg-rose-400/10",
+        border: "border-rose-200 dark:border-rose-400/20",
+        dot: "bg-rose-500",
+      };
+
+    default:
+      return {
+        label: status || "Unknown",
+        color: "text-slate-700 dark:text-slate-300",
+        bg: "bg-slate-50 dark:bg-white/[0.04]",
+        border: "border-slate-200 dark:border-white/10",
+        dot: "bg-slate-400",
+      };
+  }
+};
+
+const Label = ({ children, theme }) => (
   <div
-    style={{
-      fontSize: 11,
-      fontWeight: 500,
-      letterSpacing: "0.07em",
-      color: "#4d4d4d",
-      textTransform: "uppercase",
-      marginBottom: 6,
-    }}
+    className={`text-[11px] font-semibold tracking-[0.16em] uppercase mb-2 ${
+      theme === "dark" ? "text-slate-500" : "text-slate-500"
+    }`}
+    style={{ fontFamily: MONO }}
   >
     {children}
   </div>
 );
 
-const CodeBlock = ({ children }) => (
-  <div
-    style={{
-      background: "#141414",
-      border: "1px solid #2a2a2a",
-      borderRadius: 6,
-      padding: "10px 12px",
-      color: "#efefef",
-      fontSize: 13,
-      fontFamily: "'JetBrains Mono', 'Fira Code', ui-monospace, monospace",
-      lineHeight: 1.7,
-      whiteSpace: "pre-wrap",
-      wordBreak: "break-word",
-      minHeight: 42,
-    }}
+const CodeBlock = ({ children, theme }) => (
+  <pre
+    className={`m-0 min-h-[42px] whitespace-pre-wrap break-words rounded-xl border px-4 py-3 text-[13px] leading-6 ${
+      theme === "dark"
+        ? "border-white/10 bg-[#111111] text-slate-200"
+        : "border-slate-200 bg-slate-50 text-slate-900"
+    }`}
+    style={{ fontFamily: MONO }}
   >
-    {children || (
-      <span style={{ opacity: 0.3, fontStyle: "italic" }}>(empty)</span>
-    )}
-  </div>
+    {children || <span className="text-slate-500 italic">(empty)</span>}
+  </pre>
 );
 
-const ErrorBlock = ({ message }) => (
-  <div
-    style={{
-      background: "#141414",
-      border: "1px solid #2a2a2a",
-      borderRadius: 6,
-      padding: "10px 12px",
-      color: "#ef4743",
-      fontSize: 13,
-      fontFamily: "'JetBrains Mono', 'Fira Code', ui-monospace, monospace",
-      lineHeight: 1.7,
-      whiteSpace: "pre-wrap",
-      wordBreak: "break-word",
-    }}
+const ErrorBlock = ({ message, theme }) => (
+  <pre
+    className={`m-0 whitespace-pre-wrap break-words rounded-xl border px-4 py-3 text-[13px] leading-6 ${
+      theme === "dark"
+        ? "border-red-400/20 bg-red-400/10 text-red-300"
+        : "border-red-200 bg-red-50 text-red-700"
+    }`}
+    style={{ fontFamily: MONO }}
   >
-    {message}
-  </div>
+    {message || "Error"}
+  </pre>
 );
 
-const TestCaseCard = ({ tc, index }) => {
-  const [open, setOpen] = useState(true);
+const TestCaseCard = ({ tc, index, theme }) => {
+  const [open, setOpen] = useState(index === 0);
+
+  const meta = statusMeta(tc.status);
+  const normalized = normalizeStatus(tc.status);
 
   const isError = [
-    "CE",
+    "COMPILE_ERROR",
     "TLE",
-    "RE",
-    "MLE",
-    "Compilation Error",
-    "Time Limit Exceeded",
-    "Runtime Error",
-    "Memory Limit Exceeded",
-  ].includes(tc.status);
+    "RUNTIME_ERROR",
+    "NO_OUTPUT",
+  ].includes(normalized);
 
-  const errorMessages = {
-    CE: tc.error || "Compilation failed.",
-    "Compilation Error": tc.error || "Compilation failed.",
-    TLE: "Execution exceeded the time limit.",
-    "Time Limit Exceeded": "Execution exceeded the time limit.",
-    RE: "Process exited with a non-zero code.",
-    "Runtime Error": "Process exited with a non-zero code.",
-    MLE: "Memory limit exceeded.",
-    "Memory Limit Exceeded": "Memory limit exceeded.",
-  };
+  const errorMessage =
+    normalized === "COMPILE_ERROR"
+      ? tc.error || "Compilation failed."
+      : normalized === "TLE"
+        ? "Execution exceeded the time limit."
+        : normalized === "RUNTIME_ERROR"
+          ? tc.error || "Process exited with a non-zero code."
+          : normalized === "NO_OUTPUT"
+            ? "Your program did not print anything."
+            : tc.error || tc.status;
 
-  const passed = tc.status === "OK" || tc.status === "Accepted";
+  const cardClass =
+    theme === "dark"
+      ? "border-white/10 bg-[#111111]"
+      : "border-slate-200 bg-white";
+
+  const headerClass =
+    theme === "dark"
+      ? "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]"
+      : "border-slate-200 bg-slate-50 hover:bg-slate-100";
 
   return (
-    <div
-      style={{
-        borderRadius: 6,
-        border: "1px solid #2a2a2a",
-        marginBottom: 8,
-        overflow: "hidden",
-      }}
-    >
+    <div className={`mb-3 overflow-hidden rounded-2xl border ${cardClass}`}>
       <button
-        onClick={() => setOpen((o) => !o)}
-        style={{
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "10px 14px",
-          background: "#242424",
-          border: "none",
-          borderBottom: open ? "1px solid #2a2a2a" : "none",
-          cursor: "pointer",
-        }}
+        onClick={() => setOpen((prev) => !prev)}
+        className={`flex w-full items-center justify-between border-b px-4 py-3 text-left transition ${headerClass}`}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div className="flex items-center gap-3">
           <span
-            style={{
-              color: "#4d4d4d",
-              fontSize: 12,
-              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-            }}
+            className="text-xs text-slate-500"
+            style={{ fontFamily: MONO }}
           >
             Case {index + 1}
           </span>
+
           <span
-            style={{
-              fontSize: 12,
-              fontWeight: 500,
-              color: passed ? "#00b8a3" : "#ef4743",
-            }}
+            className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold ${meta.bg} ${meta.border} ${meta.color}`}
           >
-            {passed
-              ? "Passed"
-              : tc.status === "RE"
-                ? "Runtime Error"
-                : tc.status === "CE"
-                  ? "Compile Error"
-                  : tc.status === "TLE"
-                    ? "Time Limit Exceeded"
-                    : tc.status === "MLE"
-                      ? "Memory Limit Exceeded"
-                      : tc.status}
+            <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
+            {meta.label}
           </span>
         </div>
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 16 16"
-          fill="none"
-          style={{
-            transform: open ? "rotate(180deg)" : "rotate(0)",
-            transition: "transform 0.18s",
-            flexShrink: 0,
-          }}
+
+        <span
+          className={`text-slate-500 transition ${open ? "rotate-180" : ""}`}
         >
-          <path
-            d="M4 6l4 4 4-4"
-            stroke="#4d4d4d"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+          ▾
+        </span>
       </button>
 
       {open && (
-        <div
-          style={{
-            padding: "12px 14px",
-            background: "#1a1a1a",
-            display: "flex",
-            flexDirection: "column",
-            gap: 10,
-          }}
-        >
-          {isError && (
-            <ErrorBlock message={errorMessages[tc.status] || tc.status} />
-          )}
+        <div className="space-y-4 px-4 py-4">
+          {isError && <ErrorBlock theme={theme} message={errorMessage} />}
+
           {!isError && (
             <>
               <div>
-                <Label>Your Output</Label>
-                <CodeBlock>{tc.output}</CodeBlock>
+                <Label theme={theme}>Your Output</Label>
+                <CodeBlock theme={theme}>{tc.output}</CodeBlock>
               </div>
+
               <div>
-                <Label>Expected</Label>
-                <CodeBlock>{tc.expected}</CodeBlock>
+                <Label theme={theme}>Expected Output</Label>
+                <CodeBlock theme={theme}>{tc.expected}</CodeBlock>
               </div>
             </>
           )}
@@ -190,273 +208,223 @@ const TestCaseCard = ({ tc, index }) => {
   );
 };
 
-const BottomPanel = ({ problem, output, running, input, setInput }) => {
-  const [tab, setTab] = useState("testcase");
+export default function BottomPanel({
+  problem,
+  output,
+  running,
+  input,
+  setInput,
+  theme = "dark",
+}) {
+  const [tab, setTab] = useState("input");
 
   useEffect(() => {
-    if (problem?.sampleInput) setInput(problem.sampleInput);
-  }, [problem]);
+    if (problem?.sampleInput) {
+      setInput(problem.sampleInput);
+    }
+  }, [problem, setInput]);
 
   useEffect(() => {
-    if (output) setTab("result");
-  }, [output]);
+    if (output || running) {
+      setTab("output");
+    }
+  }, [output, running]);
 
-  const tabStyle = (active) => ({
-    padding: "0 2px 11px",
-    marginRight: 24,
-    fontSize: 13,
-    fontWeight: active ? 500 : 400,
-    color: active ? "#efefef" : "#4d4d4d",
-    background: "none",
-    border: "none",
-    borderBottom: active ? `2px solid ${ACCENT}` : "2px solid transparent",
-    cursor: "pointer",
-    transition: "color 0.15s, border-color 0.15s",
-    fontFamily: "inherit",
-    letterSpacing: "0.01em",
-  });
+  const isDark = theme === "dark";
 
-  const isAllPassed = output?.results?.every(
-    (r) => r.status === "OK" || r.status === "Accepted",
-  );
+  const results = output?.results || [];
+  const passedCount = results.filter((r) => {
+    const s = normalizeStatus(r.status);
+    return s === "ACCEPTED";
+  }).length;
+
+  const allPassed = results.length > 0 && passedCount === results.length;
+  const submitMeta = output?.status ? statusMeta(output.status) : null;
+
+  const wrapperClass = isDark
+    ? "border-white/10 bg-[#171717] text-slate-200"
+    : "border-slate-200 bg-white text-slate-900";
+
+  const tabBarClass = isDark
+    ? "border-white/10 bg-[#111111]"
+    : "border-slate-200 bg-white";
+
+  const emptyClass = isDark
+    ? "border-white/10 bg-white/[0.03] text-slate-500"
+    : "border-slate-200 bg-slate-50 text-slate-500";
+
+  const textareaClass = isDark
+    ? "border-white/10 bg-[#0D0D0D] text-slate-200 placeholder:text-slate-600 focus:border-[#58A6FF]/60"
+    : "border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-blue-500";
 
   return (
     <div
-      style={{
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        background: "#1e1e1e",
-        borderLeft: "1px solid #2a2a2a",
-        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        fontSize: 13,
-        color: "#efefef",
-      }}
+      className={`flex h-full flex-col border-l ${wrapperClass}`}
+      style={{ fontFamily: SANS }}
     >
-      {/* TAB BAR */}
-      <div
-        style={{
-          height: 44,
-          display: "flex",
-          alignItems: "flex-end",
-          padding: "0 16px",
-          borderBottom: "1px solid #2a2a2a",
-          flexShrink: 0,
-        }}
-      >
+      <div className={`flex h-12 shrink-0 items-end border-b px-5 ${tabBarClass}`}>
         <button
-          style={tabStyle(tab === "testcase")}
-          onClick={() => setTab("testcase")}
+          onClick={() => setTab("input")}
+          className={`mr-7 border-b-2 pb-3 text-sm font-semibold transition ${
+            tab === "input"
+              ? "border-[#58A6FF] text-[#58A6FF]"
+              : isDark
+                ? "border-transparent text-slate-500 hover:text-slate-300"
+                : "border-transparent text-slate-500 hover:text-slate-900"
+          }`}
         >
           Input
         </button>
+
         <button
-          style={tabStyle(tab === "result")}
-          onClick={() => setTab("result")}
+          onClick={() => setTab("output")}
+          className={`flex items-center gap-2 border-b-2 pb-3 text-sm font-semibold transition ${
+            tab === "output"
+              ? "border-[#58A6FF] text-[#58A6FF]"
+              : isDark
+                ? "border-transparent text-slate-500 hover:text-slate-300"
+                : "border-transparent text-slate-500 hover:text-slate-900"
+          }`}
         >
           Output
           {output && (
             <span
-              style={{
-                marginLeft: 6,
-                display: "inline-block",
-                width: 6,
-                height: 6,
-                borderRadius: "50%",
-                background: isAllPassed ? "#00b8a3" : "#ef4743",
-                verticalAlign: "middle",
-                position: "relative",
-                top: -1,
-              }}
+              className={`h-1.5 w-1.5 rounded-full ${
+                allPassed || output.status === "Accepted"
+                  ? "bg-emerald-400"
+                  : "bg-rose-400"
+              }`}
             />
           )}
         </button>
       </div>
 
-      {/* BODY */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "14px 16px" }}>
-        {/* INPUT TAB */}
-        {tab === "testcase" && (
+      <div className="flex-1 overflow-y-auto p-5">
+        {tab === "input" && (
           <div>
-            <Label>Custom Input</Label>
+            <div className="mb-3 flex items-center justify-between">
+              <Label theme={theme}>Custom Input</Label>
+
+              <button
+                onClick={() => setInput(problem?.sampleInput || "")}
+                className="text-xs text-slate-500 transition hover:text-[#58A6FF]"
+              >
+                Reset
+              </button>
+            </div>
+
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              style={{
-                width: "100%",
-                height: 120,
-                background: "#141414",
-                color: "#efefef",
-                border: "1px solid #2a2a2a",
-                borderRadius: 6,
-                padding: "10px 12px",
-                outline: "none",
-                resize: "none",
-                fontSize: 13,
-                lineHeight: 1.65,
-                boxSizing: "border-box",
-                fontFamily:
-                  "'JetBrains Mono', 'Fira Code', ui-monospace, monospace",
-                transition: "border-color 0.15s",
-              }}
-              onFocus={(e) => (e.target.style.borderColor = `${ACCENT}44`)}
-              onBlur={(e) => (e.target.style.borderColor = "#2a2a2a")}
+              placeholder="Enter custom input here..."
+              className={`h-32 w-full resize-none rounded-2xl border px-4 py-3 text-[13px] leading-6 outline-none transition ${textareaClass}`}
+              style={{ fontFamily: MONO }}
             />
-            <button
-              onClick={() => setInput(problem?.sampleInput || "")}
-              style={{
-                marginTop: 8,
-                background: "none",
-                border: "none",
-                color: "#4d4d4d",
-                fontSize: 12,
-                cursor: "pointer",
-                padding: 0,
-                fontFamily: "inherit",
-                opacity: 0.75,
-                transition: "opacity 0.15s",
-              }}
-              onMouseEnter={(e) => (e.target.style.opacity = 1)}
-              onMouseLeave={(e) => (e.target.style.opacity = 0.75)}
-            >
-              ↺ Reset to sample input
-            </button>
+
+            <p className="mt-3 text-xs leading-5 text-slate-500">
+              This input is used only for Run. Submit uses hidden test cases.
+            </p>
           </div>
         )}
 
-        {/* OUTPUT TAB */}
-        {tab === "result" && (
+        {tab === "output" && (
           <div>
             {running && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  color: "#4d4d4d",
-                  fontSize: 13,
-                }}
-              >
-                <span
-                  style={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: "50%",
-                    border: `2px solid ${ACCENT}`,
-                    borderTopColor: "transparent",
-                    display: "inline-block",
-                    animation: "spin 0.7s linear infinite",
-                  }}
-                />
-                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-                Judging…
+              <div className={`flex items-center gap-3 rounded-2xl border px-4 py-4 text-sm ${emptyClass}`}>
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-[#58A6FF]" />
+                Judging your code...
               </div>
             )}
 
             {!running && !output && (
-              <div style={{ color: "#3a3a3a", fontSize: 13 }}>
-                Run your code to see output
+              <div className={`rounded-2xl border px-4 py-5 text-sm ${emptyClass}`}>
+                Run your code to see output here.
               </div>
             )}
 
-            {/* RUN MODE — per test case */}
             {!running && output?.results && (
               <div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    marginBottom: 14,
-                  }}
-                >
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <Label theme={theme}>Sample Tests</Label>
+                    <div
+                      className={`text-sm font-semibold ${
+                        allPassed ? "text-emerald-500" : "text-rose-500"
+                      }`}
+                    >
+                      {passedCount} / {results.length} passed
+                    </div>
+                  </div>
+
                   <span
-                    style={{
-                      color: "#4d4d4d",
-                      fontSize: 11,
-                      fontWeight: 500,
-                      letterSpacing: "0.07em",
-                      textTransform: "uppercase",
-                    }}
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                      allPassed
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300"
+                        : "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-300"
+                    }`}
                   >
-                    Sample Tests
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 500,
-                      color: isAllPassed ? "#00b8a3" : "#ef4743",
-                    }}
-                  >
-                    {
-                      output.results.filter(
-                        (r) => r.status === "OK" || r.status === "Accepted",
-                      ).length
-                    }{" "}
-                    / {output.results.length} passed
+                    {allPassed ? "Ready to submit" : "Fix and run again"}
                   </span>
                 </div>
-                {output.results.map((tc, i) => (
-                  <TestCaseCard key={i} tc={tc} index={i} />
+
+                {results.map((tc, i) => (
+                  <TestCaseCard key={i} tc={tc} index={i} theme={theme} />
                 ))}
               </div>
             )}
 
-            {/* SUBMIT MODE */}
             {!running && output?.status && !output.results && (
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: 12 }}
-              >
+              <div className="space-y-4">
                 <div
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 500,
-                    color: output.status === "Accepted" ? "#00b8a3" : "#ef4743",
-                  }}
+                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold ${submitMeta.bg} ${submitMeta.border} ${submitMeta.color}`}
                 >
-                  {output.status}
-                  {output.failedTestCase && (
-                    <span
-                      style={{
-                        fontSize: 11,
-                        color: "#4d4d4d",
-                        fontWeight: 400,
-                        marginLeft: 10,
-                      }}
-                    >
-                      failed on test case {output.failedTestCase}
-                    </span>
-                  )}
+                  <span className={`h-1.5 w-1.5 rounded-full ${submitMeta.dot}`} />
+                  {submitMeta.label}
                 </div>
 
-                {output.status === "Wrong Answer" && (
+                {output.failedTestCase && (
+                  <div className="text-sm text-slate-500">
+                    Failed on hidden test case{" "}
+                    <span className="font-mono text-slate-700 dark:text-slate-300">
+                      #{output.failedTestCase}
+                    </span>
+                  </div>
+                )}
+
+                {normalizeStatus(output.status) === "ACCEPTED" && (
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300">
+                    All hidden test cases passed successfully.
+                  </div>
+                )}
+
+                {normalizeStatus(output.status) === "WRONG_ANSWER" && (
                   <>
                     <div>
-                      <Label>Your Output</Label>
-                      <CodeBlock>{output.output}</CodeBlock>
+                      <Label theme={theme}>Your Output</Label>
+                      <CodeBlock theme={theme}>{output.output}</CodeBlock>
                     </div>
+
                     <div>
-                      <Label>Expected</Label>
-                      <CodeBlock>{output.expected}</CodeBlock>
+                      <Label theme={theme}>Expected Output</Label>
+                      <CodeBlock theme={theme}>{output.expected}</CodeBlock>
                     </div>
                   </>
                 )}
-                {(output.status === "Compilation Error" ||
-                  output.status === "CE") && (
-                  <ErrorBlock message={output.error || "Compilation failed."} />
+
+                {normalizeStatus(output.status) === "COMPILE_ERROR" && (
+                  <ErrorBlock theme={theme} message={output.error || "Compilation failed."} />
                 )}
-                {(output.status === "Time Limit Exceeded" ||
-                  output.status === "TLE") && (
-                  <ErrorBlock message="Execution exceeded the time limit." />
+
+                {normalizeStatus(output.status) === "TLE" && (
+                  <ErrorBlock theme={theme} message="Execution exceeded the time limit." />
                 )}
-                {(output.status === "Runtime Error" ||
-                  output.status === "RE") && (
-                  <ErrorBlock message="Process exited with a non-zero code." />
+
+                {normalizeStatus(output.status) === "RUNTIME_ERROR" && (
+                  <ErrorBlock theme={theme} message={output.error || "Process exited with a non-zero code."} />
                 )}
-                {output.status === "Accepted" && (
-                  <div style={{ color: "#00b8a3", fontSize: 13 }}>
-                    All test cases passed.
-                  </div>
+
+                {normalizeStatus(output.status) === "NO_OUTPUT" && (
+                  <ErrorBlock theme={theme} message="Your program did not print anything." />
                 )}
               </div>
             )}
@@ -465,6 +433,4 @@ const BottomPanel = ({ problem, output, running, input, setInput }) => {
       </div>
     </div>
   );
-};
-
-export default BottomPanel;
+}

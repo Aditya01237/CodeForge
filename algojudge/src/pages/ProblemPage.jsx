@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { problems } from "../data/problems";
+import { apiGet, apiPost } from "../api";
 
 import TopBar from "../components/TopBar";
 import ProblemPanel from "../components/ProblemPanel";
@@ -10,7 +10,15 @@ import { STARTERS } from "../data/codeTemplates";
 
 export default function ProblemPage() {
   const { id } = useParams();
-  const problem = problems.find((p) => p.id === Number(id));
+
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("cf_theme") || "dark";
+  });
+
+  const [problem, setProblem] = useState(null);
+  const [sampleTests, setSampleTests] = useState([]);
+  const [loadingProblem, setLoadingProblem] = useState(true);
+  const [problemError, setProblemError] = useState("");
 
   const containerRef = useRef(null);
   const rightRef = useRef(null);
@@ -22,7 +30,7 @@ export default function ProblemPage() {
   const [running, setRunning] = useState(false);
   const [output, setOutput] = useState(null);
 
-  const [leftWidth, setLeftWidth] = useState(44);
+  const [leftWidth, setLeftWidth] = useState(38);
   const [bottomHeight, setBottomHeight] = useState(220);
 
   const [code, setCode] = useState("");
@@ -31,83 +39,127 @@ export default function ProblemPage() {
   const MIN_EDITOR_HEIGHT = 200;
   const RESIZER_HEIGHT = 6;
 
-  // RUN CODE
-  const handleRun = async () => {
-    setRunning(true);
-    try {
-      const res = await fetch("http://localhost:8080/api/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code,
-          language: getLanguageKey(lang),
-          input,
-          problemId: problem.id,
-        }),
-      });
-      const data = await res.json();
-      console.log(data);
-      
-      setOutput(data);
-    } catch (err) {
-      setOutput({ status: "Error", message: "Server error ❌" });
-    }
-    setRunning(false);
-  };
+  useEffect(() => {
+    localStorage.setItem("cf_theme", theme);
+  }, [theme]);
 
-  // SUBMIT
-  const handleSubmit = async () => {
-    setRunning(true);
-    try {
-      const res = await fetch("http://localhost:8080/api/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code,
-          language: getLanguageKey(lang),
-          problemId: problem.id,
-        }),
-      });
-      const data = await res.json();
-      setOutput(data);
-    } catch (err) {
-      setOutput({ status: "Error", message: "Server error ❌" });
-    }
-    setRunning(false);
-  };
-
-  const getLanguageKey = (lang) => {
-    if (lang === "C++") return "cpp";
-    if (lang === "Python") return "python";
-    if (lang === "Java") return "java";
+  const getLanguageKey = (selectedLang) => {
+    if (selectedLang === "C++") return "cpp";
+    if (selectedLang === "Python") return "python";
+    if (selectedLang === "Java") return "java";
     return "cpp";
   };
 
-  // Init code + input when lang or problem changes
+  useEffect(() => {
+    setLoadingProblem(true);
+    setProblemError("");
+    setOutput(null);
+
+    apiGet(`/problems/${id}`)
+      .then((data) => {
+        setProblem(data);
+      })
+      .catch((err) => {
+        setProblemError(err.message || "Failed to load problem");
+      })
+      .finally(() => {
+        setLoadingProblem(false);
+      });
+  }, [id]);
+
+  useEffect(() => {
+    if (!problem?.id) return;
+
+    apiGet(`/problems/${problem.id}/testcases/sample`)
+      .then((tests) => {
+        const safeTests = Array.isArray(tests) ? tests : [];
+        setSampleTests(safeTests);
+
+        if (safeTests.length > 0) {
+          setInput(safeTests[0].inputData || "");
+        } else {
+          setInput("");
+        }
+      })
+      .catch(() => {
+        setSampleTests([]);
+        setInput("");
+      });
+  }, [problem]);
+
   useEffect(() => {
     setCode(STARTERS[lang] || "");
-    if (problem?.sampleInput) setInput(problem.sampleInput);
-  }, [lang, problem]);
+  }, [lang]);
 
-  // Drag listeners — stable, no state in closure
+  const handleRun = async () => {
+    if (!problem?.id) return;
+
+    setRunning(true);
+    setOutput(null);
+
+    try {
+      const data = await apiPost("/run", {
+        code,
+        language: getLanguageKey(lang),
+        input,
+        problemId: problem.id,
+      });
+
+      setOutput(data);
+    } catch (err) {
+      setOutput({
+        status: "Error",
+        message: err.message || "Server error ❌",
+      });
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!problem?.id) return;
+
+    setRunning(true);
+    setOutput(null);
+
+    try {
+      const data = await apiPost("/submit", {
+        code,
+        language: getLanguageKey(lang),
+        problemId: problem.id,
+      });
+
+      setOutput(data);
+    } catch (err) {
+      setOutput({
+        status: "Error",
+        message: err.message || "Server error ❌",
+      });
+    } finally {
+      setRunning(false);
+    }
+  };
+
   useEffect(() => {
     const onMouseMove = (e) => {
-      // VERTICAL DRAG (LEFT-RIGHT)
       if (draggingVertical.current && containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
         const percent = ((e.clientX - rect.left) / rect.width) * 100;
-        if (percent > 15 && percent < 85) {
+
+        if (percent > 28 && percent < 58) {
           setLeftWidth(percent);
         }
       }
 
-      // HORIZONTAL DRAG (TOP-BOTTOM)
       if (draggingHorizontal.current && rightRef.current) {
         const rect = rightRef.current.getBoundingClientRect();
         const newBottomHeight = rect.bottom - e.clientY;
         const minBottom = 120;
         const maxBottom = rect.height - MIN_EDITOR_HEIGHT - RESIZER_HEIGHT;
-        setBottomHeight(Math.max(minBottom, Math.min(newBottomHeight, maxBottom)));
+
+        setBottomHeight(
+          Math.max(minBottom, Math.min(newBottomHeight, maxBottom)),
+        );
       }
     };
 
@@ -123,71 +175,103 @@ export default function ProblemPage() {
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
     };
-  }, []); // empty — no stale closures
+  }, []);
 
-  if (!problem) return <div>Problem not found</div>;
+  if (loadingProblem) {
+    return (
+      <div className="min-h-screen bg-[#070B12] text-white p-8">
+        Loading problem...
+      </div>
+    );
+  }
+
+  if (problemError) {
+    return (
+      <div className="min-h-screen bg-[#070B12] text-red-400 p-8">
+        {problemError}
+      </div>
+    );
+  }
+
+  if (!problem) {
+    return (
+      <div className="min-h-screen bg-[#070B12] text-white p-8">
+        Problem not found
+      </div>
+    );
+  }
+
+  const pageBg = theme === "dark" ? "bg-[#070B12]" : "bg-[#F8FAFC]";
+  const dividerBg = theme === "dark" ? "bg-white/10" : "bg-slate-200";
 
   return (
-    <div className="flex flex-col h-screen bg-[#000000]">
-
-      {/* TOP BAR */}
+    <div className={`flex flex-col h-screen overflow-hidden ${pageBg}`}>
       <TopBar
         problem={problem}
         lang={lang}
         onRun={handleRun}
         onSubmit={handleSubmit}
         running={running}
+        theme={theme}
+        setTheme={setTheme}
       />
 
       <div ref={containerRef} className="flex flex-1 overflow-hidden">
-
-        {/* LEFT PANEL */}
-        <div style={{ width: `${leftWidth}%`, minWidth: 280 }} className="overflow-hidden">
-          <ProblemPanel problem={problem} />
+        <div
+          style={{ width: `${leftWidth}%`, minWidth: 360 }}
+          className="overflow-hidden"
+        >
+          <ProblemPanel
+            problem={problem}
+            sampleTests={sampleTests}
+            theme={theme}
+          />
         </div>
 
-        {/* VERTICAL RESIZER */}
         <div
           onMouseDown={() => (draggingVertical.current = true)}
-          className="w-[6px] cursor-col-resize bg-[#111] flex-shrink-0"
+          className={`w-[6px] cursor-col-resize flex-shrink-0 ${dividerBg}`}
         />
 
-        {/* RIGHT PANEL */}
         <div
           ref={rightRef}
           className="flex flex-col overflow-hidden"
           style={{ width: `${100 - leftWidth}%` }}
         >
-
-          {/* EDITOR — explicit height so Monaco stays stable */}
           <div
-            style={{ height: `calc(100% - ${bottomHeight}px - ${RESIZER_HEIGHT}px)` }}
-            className="overflow-hidden border-b border-[#2A2F3A] flex-shrink-0"
+            style={{
+              height: `calc(100% - ${bottomHeight}px - ${RESIZER_HEIGHT}px)`,
+            }}
+            className="overflow-hidden flex-shrink-0"
           >
             <EditorPanel
               problem={problem}
               code={code}
               setCode={setCode}
+              lang={lang}
               onLangChange={setLang}
+              theme={theme}
             />
           </div>
 
-          {/* HORIZONTAL RESIZER */}
           <div
             onMouseDown={() => (draggingHorizontal.current = true)}
-            className="h-[6px] cursor-row-resize bg-[#111] flex-shrink-0"
+            className={`h-[6px] cursor-row-resize flex-shrink-0 ${dividerBg}`}
           />
 
-          {/* BOTTOM PANEL */}
-          <div style={{ height: bottomHeight }} className="overflow-hidden flex-shrink-0">
+          <div
+            style={{ height: bottomHeight }}
+            className="overflow-hidden flex-shrink-0"
+          >
             <BottomPanel
+              problem={problem}
               output={output}
               running={running}
               input={input}
               setInput={setInput}
+              theme={theme}
             />
           </div>
-
         </div>
       </div>
     </div>

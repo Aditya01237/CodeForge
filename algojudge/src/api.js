@@ -1,18 +1,26 @@
-const sendData = async () => {
-    console.log("API CALLED 🚀"); // 👈 add this
-  const res = await fetch("http://localhost:8080/api/problems", {
+const BASE_URL = "http://localhost:8080/api";
+
+export async function apiGet(path) {
+  const res = await fetch(`${BASE_URL}${path}`);
+  if (!res.ok) {
+    throw new Error(`GET ${path} failed`);
+  }
+  return res.json();
+}
+
+export async function apiPost(path, body) {
+  const res = await fetch(`${BASE_URL}${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      id: 1,
-      title: "Two Sum",
-    }),
+    body: JSON.stringify(body),
   });
 
-  const data = await res.text();
-  console.log(data);
-};
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `POST ${path} failed`);
+  }
 
-export default sendData;
+  return res.json();
+}
