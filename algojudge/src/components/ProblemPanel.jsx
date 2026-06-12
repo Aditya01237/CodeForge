@@ -1,9 +1,12 @@
+import { assetUrl } from "../api";
+
 const MONO = "'JetBrains Mono', 'Fira Code', ui-monospace, monospace";
 const SANS = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
 const toLines = (value) => {
   if (!value) return [];
   if (Array.isArray(value)) return value;
+
   return String(value)
     .split("\n")
     .map((line) => line.trim())
@@ -13,10 +16,22 @@ const toLines = (value) => {
 const toParagraphs = (value) => {
   if (!value) return [];
   if (Array.isArray(value)) return value;
+
   return String(value)
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
+};
+
+const parseContentBlocks = (contentJson) => {
+  if (!contentJson) return [];
+
+  try {
+    const parsed = JSON.parse(contentJson);
+    return Array.isArray(parsed?.blocks) ? parsed.blocks : [];
+  } catch {
+    return [];
+  }
 };
 
 const Section = ({ title, children, theme }) => (
@@ -69,9 +84,7 @@ const ExampleCard = ({ example, index, theme }) => (
     <div className="p-4 space-y-4">
       <div>
         <div
-          className={`text-[11px] uppercase tracking-[0.16em] mb-2 ${
-            theme === "dark" ? "text-slate-500" : "text-slate-500"
-          }`}
+          className="text-[11px] uppercase tracking-[0.16em] mb-2 text-slate-500"
           style={{ fontFamily: MONO }}
         >
           Input
@@ -81,9 +94,7 @@ const ExampleCard = ({ example, index, theme }) => (
 
       <div>
         <div
-          className={`text-[11px] uppercase tracking-[0.16em] mb-2 ${
-            theme === "dark" ? "text-slate-500" : "text-slate-500"
-          }`}
+          className="text-[11px] uppercase tracking-[0.16em] mb-2 text-slate-500"
           style={{ fontFamily: MONO }}
         >
           Output
@@ -94,13 +105,12 @@ const ExampleCard = ({ example, index, theme }) => (
       {example.explanation && (
         <div>
           <div
-            className={`text-[11px] uppercase tracking-[0.16em] mb-2 ${
-              theme === "dark" ? "text-slate-500" : "text-slate-500"
-            }`}
+            className="text-[11px] uppercase tracking-[0.16em] mb-2 text-slate-500"
             style={{ fontFamily: MONO }}
           >
             Explanation
           </div>
+
           <p
             className={`m-0 text-[15px] leading-7 ${
               theme === "dark" ? "text-slate-300" : "text-slate-700"
@@ -114,24 +124,230 @@ const ExampleCard = ({ example, index, theme }) => (
   </div>
 );
 
-export default function ProblemPanel({ problem, sampleTests = [], theme = "dark" }) {
+const RichBlocks = ({ blocks, theme }) => {
+  const text = theme === "dark" ? "text-white" : "text-slate-950";
+  const muted = theme === "dark" ? "text-slate-400" : "text-slate-600";
+
+  if (!blocks.length) return null;
+
+  return (
+    <section className="mb-8 space-y-5">
+      {blocks.map((block, index) => {
+        if (block.type === "paragraph") {
+          return (
+            <p
+              key={block.id || index}
+              className={`m-0 text-[16px] leading-8 ${text}`}
+            >
+              {block.text}
+            </p>
+          );
+        }
+
+        if (block.type === "math") {
+          return (
+            <div
+              key={block.id || index}
+              className={`rounded-2xl border px-4 py-3 ${
+                theme === "dark"
+                  ? "border-blue-400/20 bg-blue-400/10 text-blue-200"
+                  : "border-blue-200 bg-blue-50 text-blue-800"
+              }`}
+            >
+              <div
+                className="text-[11px] uppercase tracking-[0.16em] mb-2 opacity-70"
+                style={{ fontFamily: MONO }}
+              >
+                Math
+              </div>
+
+              <div
+                className="text-[15px] leading-7 whitespace-pre-wrap"
+                style={{ fontFamily: MONO }}
+              >
+                {block.text}
+              </div>
+            </div>
+          );
+        }
+
+        if (block.type === "code") {
+          return (
+            <div key={block.id || index}>
+              {block.language && (
+                <div
+                  className="text-[11px] uppercase tracking-[0.16em] mb-2 text-slate-500"
+                  style={{ fontFamily: MONO }}
+                >
+                  {block.language}
+                </div>
+              )}
+
+              <CodeBox theme={theme}>{block.text}</CodeBox>
+            </div>
+          );
+        }
+
+        if (block.type === "image") {
+          return (
+            <figure key={block.id || index} className="m-0">
+              {block.url && (
+                <img
+                  src={assetUrl(block.url)}
+                  alt={block.caption || "Problem image"}
+                  className={`mx-auto max-w-[420px] max-h-[360px] w-auto rounded-xl border object-contain ${
+                    theme === "dark" ? "border-white/10" : "border-slate-200"
+                  }`}
+                />
+              )}
+
+              {block.caption && (
+                <figcaption className={`mt-2 text-sm ${muted}`}>
+                  {block.caption}
+                </figcaption>
+              )}
+            </figure>
+          );
+        }
+
+        if (block.type === "example") {
+          return (
+            <div
+              key={block.id || index}
+              className={`rounded-2xl border overflow-hidden ${
+                theme === "dark"
+                  ? "bg-[#111111] border-white/10"
+                  : "bg-white border-slate-200"
+              }`}
+            >
+              <div
+                className={`px-4 py-3 border-b font-semibold ${
+                  theme === "dark"
+                    ? "border-white/10 text-white bg-white/[0.03]"
+                    : "border-slate-200 text-slate-950 bg-slate-50"
+                }`}
+              >
+                {block.title || `Example ${index + 1}`}
+              </div>
+
+              <div className="p-4 space-y-4">
+                {block.imageUrl && (
+                  <figure className="m-0">
+                    <img
+                      src={assetUrl(block.imageUrl)}
+                      alt={block.imageCaption || block.title || "Example image"}
+                      className={`mx-auto max-w-[420px] max-h-[360px] w-auto border object-contain ${
+                        theme === "dark"
+                          ? "border-white/10"
+                          : "border-slate-200"
+                      }`}
+                    />
+
+                    {block.imageCaption && (
+                      <figcaption className={`mt-2 text-sm ${muted}`}>
+                        {block.imageCaption}
+                      </figcaption>
+                    )}
+                  </figure>
+                )}
+
+                {block.input && (
+                  <div>
+                    <div
+                      className="text-[11px] uppercase tracking-[0.16em] mb-2 text-slate-500"
+                      style={{ fontFamily: MONO }}
+                    >
+                      Input
+                    </div>
+
+                    <CodeBox theme={theme}>{block.input}</CodeBox>
+                  </div>
+                )}
+
+                {block.output && (
+                  <div>
+                    <div
+                      className="text-[11px] uppercase tracking-[0.16em] mb-2 text-slate-500"
+                      style={{ fontFamily: MONO }}
+                    >
+                      Output
+                    </div>
+
+                    <CodeBox theme={theme}>{block.output}</CodeBox>
+                  </div>
+                )}
+
+                {block.explanation && (
+                  <div>
+                    <div
+                      className="text-[11px] uppercase tracking-[0.16em] mb-2 text-slate-500"
+                      style={{ fontFamily: MONO }}
+                    >
+                      Explanation
+                    </div>
+
+                    <p
+                      className={`m-0 text-[15px] leading-7 ${
+                        theme === "dark" ? "text-slate-300" : "text-slate-700"
+                      }`}
+                    >
+                      {block.explanation}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        }
+
+        if (block.type === "note") {
+          return (
+            <div
+              key={block.id || index}
+              className={`rounded-2xl border px-4 py-3 text-sm leading-6 ${
+                theme === "dark"
+                  ? "border-amber-400/20 bg-amber-400/10 text-amber-100"
+                  : "border-amber-200 bg-amber-50 text-amber-800"
+              }`}
+            >
+              {block.text}
+            </div>
+          );
+        }
+
+        return null;
+      })}
+    </section>
+  );
+};
+
+export default function ProblemPanel({
+  problem,
+  sampleTests = [],
+  theme = "dark",
+}) {
   if (!problem) return null;
+
+  const richBlocks = parseContentBlocks(problem.contentJson);
 
   const description = toParagraphs(problem.description);
   const inputFormat = toLines(problem.inputFormat);
   const outputFormat = toLines(problem.outputFormat);
   const constraints = toLines(problem.constraintsText || problem.constraints);
 
-  const examples =
-    Array.isArray(problem.examples) && problem.examples.length > 0
+  const hasRichExampleBlocks = richBlocks.some(
+    (block) => block.type === "example",
+  );
+
+  const examples = hasRichExampleBlocks
+    ? []
+    : Array.isArray(problem.examples) && problem.examples.length > 0
       ? problem.examples
       : sampleTests.slice(0, 3).map((tc) => ({
           input: tc.inputData,
           output: tc.expectedOutput,
           explanation: "",
         }));
-
-  const images = Array.isArray(problem.images) ? problem.images : [];
 
   const panelBg = theme === "dark" ? "bg-[#171717]" : "bg-white";
   const headerBg = theme === "dark" ? "bg-[#1B1B1B]" : "bg-slate-50";
@@ -144,7 +360,6 @@ export default function ProblemPanel({ problem, sampleTests = [], theme = "dark"
       className={`h-full flex flex-col border-r ${panelBg} ${border}`}
       style={{ fontFamily: SANS }}
     >
-      {/* HEADER */}
       <div className={`shrink-0 border-b ${border} ${headerBg} px-6 py-5`}>
         <div className="flex items-start gap-4">
           <span
@@ -159,7 +374,9 @@ export default function ProblemPanel({ problem, sampleTests = [], theme = "dark"
           </span>
 
           <div>
-            <h1 className={`m-0 text-[22px] font-bold tracking-tight leading-8 ${text}`}>
+            <h1
+              className={`m-0 text-[22px] font-bold tracking-tight leading-8 ${text}`}
+            >
               {problem.title}
             </h1>
 
@@ -175,42 +392,22 @@ export default function ProblemPanel({ problem, sampleTests = [], theme = "dark"
         </div>
       </div>
 
-      {/* BODY */}
       <div className="flex-1 overflow-y-auto px-6 py-6">
-        {description.length > 0 && (
-          <section className="mb-8">
-            {description.map((para, i) => (
-              <p
-                key={i}
-                className={`m-0 mb-3 last:mb-0 text-[16px] leading-8 ${text}`}
-              >
-                {para}
-              </p>
-            ))}
-          </section>
-        )}
-
-        {images.length > 0 && (
-          <Section title="Visual Explanation" theme={theme}>
-            <div className="space-y-4">
-              {images.map((img, i) => (
-                <figure key={i} className="m-0">
-                  <img
-                    src={img.url}
-                    alt={img.caption || `Problem image ${i + 1}`}
-                    className={`w-full rounded-2xl border object-contain ${
-                      theme === "dark" ? "border-white/10" : "border-slate-200"
-                    }`}
-                  />
-                  {img.caption && (
-                    <figcaption className={`mt-2 text-sm ${muted}`}>
-                      {img.caption}
-                    </figcaption>
-                  )}
-                </figure>
+        {richBlocks.length > 0 ? (
+          <RichBlocks blocks={richBlocks} theme={theme} />
+        ) : (
+          description.length > 0 && (
+            <section className="mb-8">
+              {description.map((para, i) => (
+                <p
+                  key={i}
+                  className={`m-0 mb-3 last:mb-0 text-[16px] leading-8 ${text}`}
+                >
+                  {para}
+                </p>
               ))}
-            </div>
-          </Section>
+            </section>
+          )
         )}
 
         {examples.length > 0 && (
@@ -228,7 +425,11 @@ export default function ProblemPanel({ problem, sampleTests = [], theme = "dark"
                 key={i}
                 className={`flex gap-3 text-[15px] leading-7 mb-2 ${text}`}
               >
-                <span className={theme === "dark" ? "text-slate-600" : "text-slate-400"}>
+                <span
+                  className={
+                    theme === "dark" ? "text-slate-600" : "text-slate-400"
+                  }
+                >
                   ›
                 </span>
                 <span>{line}</span>
@@ -244,7 +445,11 @@ export default function ProblemPanel({ problem, sampleTests = [], theme = "dark"
                 key={i}
                 className={`flex gap-3 text-[15px] leading-7 mb-2 ${text}`}
               >
-                <span className={theme === "dark" ? "text-slate-600" : "text-slate-400"}>
+                <span
+                  className={
+                    theme === "dark" ? "text-slate-600" : "text-slate-400"
+                  }
+                >
                   ›
                 </span>
                 <span>{line}</span>
@@ -263,6 +468,7 @@ export default function ProblemPanel({ problem, sampleTests = [], theme = "dark"
                       theme === "dark" ? "bg-slate-600" : "bg-slate-400"
                     }`}
                   />
+
                   <code
                     className={`rounded-lg border px-3 py-1.5 text-[14px] ${
                       theme === "dark"

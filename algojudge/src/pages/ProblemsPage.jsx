@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import ContestFullscreenGuard from "../components/ContestFullscreenGuard";
 import { apiGet } from "../api";
 
 export default function ProblemsPage() {
@@ -23,7 +24,9 @@ export default function ProblemsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white p-8">
+  <div className={`flex flex-col h-screen overflow-hidden ${pageBg}`}>
+    {mode === "test" && <ContestFullscreenGuard testId={testId} />}
+      
       <h1 className="text-3xl font-bold mb-6">Problems</h1>
 
       <div className="space-y-3">

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { apiGet } from "../api";
+import { apiGet, apiPost } from "../api";
 import {
   Home,
   Moon,
@@ -118,6 +118,42 @@ export default function TestLobbyPage() {
     ? "border-white/10 bg-white/[0.03]"
     : "border-slate-200 bg-white";
 
+  const startContest = async () => {
+    setError("");
+
+    if (!participant?.participantId) {
+      setError("Participant details are missing. Please register again.");
+      return;
+    }
+
+    if (localStorage.getItem(`cf_test_blocked_${testId}`) === "true") {
+      setError("You are already out of this contest.");
+      return;
+    }
+
+    try {
+      await document.documentElement.requestFullscreen();
+
+      const updatedParticipant = await apiPost(
+        `/tests/${testId}/participants/${participant.participantId}/start`,
+        {},
+      );
+
+      localStorage.setItem(
+        "cf_participant",
+        JSON.stringify(updatedParticipant),
+      );
+      localStorage.setItem(`cf_test_started_${testId}`, "true");
+
+      navigate(`/test/${testId}/problems`);
+    } catch (err) {
+      setError(
+        err.message ||
+          "Could not start test. Fullscreen permission is required to enter the contest.",
+      );
+    }
+  };
+
   return (
     <div className={`min-h-screen ${pageClass}`}>
       {/* NAVBAR */}
@@ -212,9 +248,7 @@ export default function TestLobbyPage() {
           <div className="grid lg:grid-cols-[1fr_380px]">
             {/* RULES */}
             <section className="p-8">
-              <h2 className="text-2xl font-bold mb-5">
-                Rules before starting
-              </h2>
+              <h2 className="text-2xl font-bold mb-5">Rules before starting</h2>
 
               <div className="grid md:grid-cols-2 gap-4">
                 {[
@@ -366,15 +400,13 @@ export default function TestLobbyPage() {
                     <div className="text-slate-500 uppercase text-xs tracking-widest">
                       Problems
                     </div>
-                    <div className="font-semibold mt-1">
-                      {problems.length}
-                    </div>
+                    <div className="font-semibold mt-1">{problems.length}</div>
                   </div>
                 </div>
               </div>
 
               <button
-                onClick={() => navigate(`/test/${testId}/problems`)}
+                onClick={startContest}
                 className="mt-8 w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition flex items-center justify-center gap-2"
               >
                 <PlayCircle size={18} />

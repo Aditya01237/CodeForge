@@ -19,12 +19,16 @@ public class ProblemService {
     public Problem createProblem(ProblemRequest request) {
         Problem problem = new Problem();
 
-        problem.setTitle(request.getTitle());
-        problem.setDifficulty(request.getDifficulty());
-        problem.setDescription(request.getDescription());
-        problem.setInputFormat(request.getInputFormat());
-        problem.setOutputFormat(request.getOutputFormat());
-        problem.setConstraintsText(request.getConstraintsText());
+        problem.setTitle(clean(request.getTitle()));
+        problem.setDifficulty(clean(request.getDifficulty()));
+        problem.setDescription(clean(request.getDescription()));
+        problem.setInputFormat(clean(request.getInputFormat()));
+        problem.setOutputFormat(clean(request.getOutputFormat()));
+        problem.setConstraintsText(clean(request.getConstraintsText()));
+        problem.setContentJson(clean(request.getContentJson()));
+
+        problem.setReusable(request.getReusable() == null ? true : request.getReusable());
+        problem.setCreatedForTestId(request.getCreatedForTestId());
 
         return problemRepository.save(problem);
     }
@@ -36,5 +40,11 @@ public class ProblemService {
     public Problem getProblemById(Long id) {
         return problemRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Problem not found"));
+    }
+
+    private String clean(String value) {
+        if (value == null) return null;
+        String cleaned = value.trim();
+        return cleaned.isEmpty() ? null : cleaned;
     }
 }

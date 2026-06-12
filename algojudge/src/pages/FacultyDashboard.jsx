@@ -108,7 +108,9 @@ export default function FacultyDashboard() {
 
   return (
     <div className={`min-h-screen ${pageClass}`}>
-      <nav className={`h-16 px-6 flex items-center justify-between border-b ${navClass}`}>
+      <nav
+        className={`h-16 px-6 flex items-center justify-between border-b ${navClass}`}
+      >
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate("/")}
@@ -125,11 +127,15 @@ export default function FacultyDashboard() {
             CodeForge
           </button>
 
-          <div className={`hidden md:block h-7 w-px ${isDark ? "bg-white/10" : "bg-slate-200"}`} />
+          <div
+            className={`hidden md:block h-7 w-px ${isDark ? "bg-white/10" : "bg-slate-200"}`}
+          />
 
           <div className="hidden md:block">
             <div className="font-bold">Faculty Dashboard</div>
-            <div className={`text-xs ${muted}`}>Create tests and manage assessments</div>
+            <div className={`text-xs ${muted}`}>
+              Create tests and manage assessments
+            </div>
           </div>
         </div>
 
@@ -154,8 +160,12 @@ export default function FacultyDashboard() {
 
       <main className="max-w-7xl mx-auto px-6 py-10">
         <section className="grid lg:grid-cols-[1.2fr_0.8fr] gap-6 mb-8">
-          <div className={`rounded-3xl border p-8 relative overflow-hidden ${cardClass}`}>
-            <div className={`absolute -right-20 -top-20 h-72 w-72 rounded-full blur-3xl ${isDark ? "bg-blue-500/20" : "bg-blue-200/70"}`} />
+          <div
+            className={`rounded-3xl border p-8 relative overflow-hidden ${cardClass}`}
+          >
+            <div
+              className={`absolute -right-20 -top-20 h-72 w-72 rounded-full blur-3xl ${isDark ? "bg-blue-500/20" : "bg-blue-200/70"}`}
+            />
 
             <div className="relative">
               <div
@@ -173,7 +183,8 @@ export default function FacultyDashboard() {
 
               <p className={`text-lg leading-8 max-w-2xl ${muted}`}>
                 Build coding tests with password access, choose college-only or
-                external mode, attach DSA problems, and share the test code with students.
+                external mode, attach DSA problems, and share the test code with
+                students.
               </p>
 
               <div className="flex flex-wrap gap-3 mt-7">
@@ -211,13 +222,17 @@ export default function FacultyDashboard() {
             <div className={`rounded-3xl border p-5 ${cardClass}`}>
               <BookOpen className="text-[#58A6FF] mb-3" size={22} />
               <div className="text-3xl font-black">DB</div>
-              <div className={`text-sm mt-1 ${muted}`}>Problems from backend</div>
+              <div className={`text-sm mt-1 ${muted}`}>
+                Problems from backend
+              </div>
             </div>
           </div>
         </section>
 
         <section className={`rounded-3xl border overflow-hidden ${cardClass}`}>
-          <div className={`px-6 py-5 border-b ${isDark ? "border-white/10" : "border-slate-200"}`}>
+          <div
+            className={`px-6 py-5 border-b ${isDark ? "border-white/10" : "border-slate-200"}`}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-black">Coding Tests</h2>
@@ -310,10 +325,12 @@ export default function FacultyDashboard() {
                       </button>
 
                       <button
-                        onClick={() => navigate(`/test/${test.id}/problems`)}
+                        onClick={() =>
+                          navigate(`/faculty/tests/${test.id}/manage`)
+                        }
                         className={`h-10 px-4 rounded-xl border text-sm font-semibold transition ${softButton}`}
                       >
-                        Problems
+                        Manage
                       </button>
                     </div>
                   </div>

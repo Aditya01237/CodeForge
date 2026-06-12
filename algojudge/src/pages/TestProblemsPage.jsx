@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import ContestFullscreenGuard from "../components/ContestFullscreenGuard";
 import { apiGet } from "../api";
 import {
   Home,
@@ -270,6 +271,7 @@ export default function TestProblemsPage() {
 
   return (
     <div className={`min-h-screen ${pageClass}`}>
+      <ContestFullscreenGuard testId={testId} />
       <nav
         className={`h-16 px-6 flex items-center justify-between border-b ${navClass}`}
       >

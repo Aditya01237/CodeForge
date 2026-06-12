@@ -4,8 +4,10 @@ import com.coding.codeforge.DTO.*;
 import com.coding.codeforge.entity.*;
 import com.coding.codeforge.repository.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -16,17 +18,20 @@ public class CodingTestService {
     private final ProblemRepository problemRepository;
     private final UserRepository userRepository;
     private final TestParticipantRepository testParticipantRepository;
+    private final TestCaseRepository testCaseRepository;
 
     public CodingTestService(CodingTestRepository codingTestRepository,
                              TestProblemRepository testProblemRepository,
                              ProblemRepository problemRepository,
                              UserRepository userRepository,
-                             TestParticipantRepository testParticipantRepository) {
+                             TestParticipantRepository testParticipantRepository,
+                             TestCaseRepository testCaseRepository) {
         this.codingTestRepository = codingTestRepository;
         this.testProblemRepository = testProblemRepository;
         this.problemRepository = problemRepository;
         this.userRepository = userRepository;
         this.testParticipantRepository = testParticipantRepository;
+        this.testCaseRepository = testCaseRepository;
     }
 
     public CodingTest createTest(CodingTestRequest request) {
@@ -79,16 +84,82 @@ public class CodingTestService {
         Problem problem = problemRepository.findById(request.getProblemId())
                 .orElseThrow(() -> new RuntimeException("Problem not found"));
 
+        TestProblem existing = testProblemRepository
+                .findByCodingTest_IdAndProblem_Id(testId, request.getProblemId())
+                .orElse(null);
+
+        if (existing != null) {
+            if (request.getProblemOrder() != null) {
+                existing.setProblemOrder(request.getProblemOrder());
+                return testProblemRepository.save(existing);
+            }
+            return existing;
+        }
+
         TestProblem testProblem = new TestProblem();
         testProblem.setCodingTest(codingTest);
         testProblem.setProblem(problem);
-        testProblem.setProblemOrder(request.getProblemOrder());
+        testProblem.setProblemOrder(
+                request.getProblemOrder() == null
+                        ? getNextProblemOrder(testId)
+                        : request.getProblemOrder()
+        );
+
+        return testProblemRepository.save(testProblem);
+    }
+
+    @Transactional
+    public TestProblem createProblemAndAttach(Long testId, CreateProblemForTestRequest request) {
+        CodingTest codingTest = codingTestRepository.findById(testId)
+                .orElseThrow(() -> new RuntimeException("Coding test not found"));
+
+        if (request.getTitle() == null || request.getTitle().isBlank()) {
+            throw new RuntimeException("Problem title is required");
+        }
+
+        Problem problem = new Problem();
+        problem.setTitle(clean(request.getTitle()));
+        problem.setDifficulty(clean(request.getDifficulty()));
+        problem.setDescription(clean(request.getDescription()));
+        problem.setInputFormat(clean(request.getInputFormat()));
+        problem.setOutputFormat(clean(request.getOutputFormat()));
+        problem.setConstraintsText(clean(request.getConstraintsText()));
+        problem.setContentJson(clean(request.getContentJson()));
+
+        Boolean reusable = request.getReusable() == null ? false : request.getReusable();
+        problem.setReusable(reusable);
+
+        if (!reusable) {
+            problem.setCreatedForTestId(testId);
+        }
+
+        Problem savedProblem = problemRepository.save(problem);
+
+        saveTestCases(savedProblem, request.getSampleTestCases(), false);
+        saveTestCases(savedProblem, request.getHiddenTestCases(), true);
+
+        TestProblem testProblem = new TestProblem();
+        testProblem.setCodingTest(codingTest);
+        testProblem.setProblem(savedProblem);
+        testProblem.setProblemOrder(
+                request.getProblemOrder() == null
+                        ? getNextProblemOrder(testId)
+                        : request.getProblemOrder()
+        );
 
         return testProblemRepository.save(testProblem);
     }
 
     public List<TestProblem> getProblemsForTest(Long testId) {
-        return testProblemRepository.findByCodingTestId(testId);
+        return testProblemRepository.findByCodingTest_IdOrderByProblemOrderAsc(testId);
+    }
+
+    public void removeProblemFromTest(Long testId, Long problemId) {
+        TestProblem testProblem = testProblemRepository
+                .findByCodingTest_IdAndProblem_Id(testId, problemId)
+                .orElseThrow(() -> new RuntimeException("Problem is not attached to this test"));
+
+        testProblemRepository.delete(testProblem);
     }
 
     public CodingTest joinTestByCode(String testCode) {
@@ -155,6 +226,7 @@ public class CodingTestService {
                     .orElse(null);
 
             if (existing != null) {
+                validateParticipantCanEnter(existing);
                 return toParticipantResponse(existing);
             }
 
@@ -165,7 +237,7 @@ public class CodingTestService {
             participant.setName(clean(request.getName()));
             participant.setEmail(clean(request.getEmail()));
             participant.setIdentifier(rollNumber);
-            participant.setStatus("STARTED");
+            participant.setStatus("REGISTERED");
 
             return toParticipantResponse(testParticipantRepository.save(participant));
         }
@@ -199,13 +271,43 @@ public class CodingTestService {
         participant.setName(clean(request.getName()));
         participant.setEmail(clean(request.getEmail()));
         participant.setIdentifier(identifier);
-        participant.setStatus("STARTED");
+        participant.setStatus("REGISTERED");
 
         return toParticipantResponse(testParticipantRepository.save(participant));
     }
 
     public List<TestParticipant> getParticipantsForTest(Long testId) {
         return testParticipantRepository.findByCodingTestId(testId);
+    }
+
+    private int getNextProblemOrder(Long testId) {
+        return testProblemRepository.findByCodingTest_Id(testId)
+                .stream()
+                .map(TestProblem::getProblemOrder)
+                .filter(order -> order != null)
+                .max(Comparator.naturalOrder())
+                .orElse(0) + 1;
+    }
+
+    private void saveTestCases(Problem problem, List<TestCaseRequest> requests, boolean hidden) {
+        if (requests == null) return;
+
+        for (TestCaseRequest request : requests) {
+            if (request == null) continue;
+
+            String input = clean(request.getInputData());
+            String output = clean(request.getExpectedOutput());
+
+            if (input == null && output == null) continue;
+
+            TestCaseEntity testCase = new TestCaseEntity();
+            testCase.setProblem(problem);
+            testCase.setInputData(input == null ? "" : input);
+            testCase.setExpectedOutput(output == null ? "" : output);
+            testCase.setHidden(hidden);
+
+            testCaseRepository.save(testCase);
+        }
     }
 
     private void validateTimeWindow(CodingTest codingTest) {
@@ -231,6 +333,72 @@ public class CodingTestService {
                 participant.getIdentifier(),
                 participant.getStatus()
         );
+    }
+
+    public ParticipantResponse startParticipantTest(Long testId, Long participantId) {
+        CodingTest codingTest = codingTestRepository.findById(testId)
+                .orElseThrow(() -> new RuntimeException("Coding test not found"));
+
+        validateTimeWindow(codingTest);
+
+        TestParticipant participant = testParticipantRepository.findById(participantId)
+                .orElseThrow(() -> new RuntimeException("Participant not found"));
+
+        if (!participant.getCodingTest().getId().equals(testId)) {
+            throw new RuntimeException("Participant does not belong to this test");
+        }
+
+        String status = participant.getStatus();
+
+        if ("IN_PROGRESS".equals(status)) {
+            throw new RuntimeException("You have already started this contest. Re-entry is not allowed.");
+        }
+
+        if ("DISQUALIFIED".equals(status)) {
+            throw new RuntimeException("You are disqualified from this contest.");
+        }
+
+        if ("SUBMITTED".equals(status) || "COMPLETED".equals(status)) {
+            throw new RuntimeException("You have already completed this contest.");
+        }
+
+        participant.setStatus("IN_PROGRESS");
+
+        return toParticipantResponse(testParticipantRepository.save(participant));
+    }
+
+    public ParticipantResponse disqualifyParticipant(Long testId, Long participantId, String reason) {
+        TestParticipant participant = testParticipantRepository.findById(participantId)
+                .orElseThrow(() -> new RuntimeException("Participant not found"));
+
+        if (!participant.getCodingTest().getId().equals(testId)) {
+            throw new RuntimeException("Participant does not belong to this test");
+        }
+
+        if ("SUBMITTED".equals(participant.getStatus()) || "COMPLETED".equals(participant.getStatus())) {
+            return toParticipantResponse(participant);
+        }
+
+        participant.setStatus("DISQUALIFIED");
+        participant.setSubmittedAt(LocalDateTime.now());
+
+        return toParticipantResponse(testParticipantRepository.save(participant));
+    }
+
+    private void validateParticipantCanEnter(TestParticipant participant) {
+        String status = participant.getStatus();
+
+        if ("IN_PROGRESS".equals(status)) {
+            throw new RuntimeException("You have already started this contest. Re-entry is not allowed.");
+        }
+
+        if ("DISQUALIFIED".equals(status)) {
+            throw new RuntimeException("You are disqualified from this contest.");
+        }
+
+        if ("SUBMITTED".equals(status) || "COMPLETED".equals(status)) {
+            throw new RuntimeException("You have already completed this contest.");
+        }
     }
 
     private String clean(String value) {

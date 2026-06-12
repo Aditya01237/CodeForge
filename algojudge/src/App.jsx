@@ -10,6 +10,7 @@ import TestProblemsPage from "./pages/TestProblemsPage";
 
 import FacultyDashboard from "./pages/FacultyDashboard";
 import FacultyCreateTestPage from "./pages/FacultyCreateTestPage";
+import FacultyManageTestPage from "./pages/FacultyManageTestPage";
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
 
         <Route path="/faculty" element={<FacultyDashboard />} />
         <Route path="/faculty/tests/create" element={<FacultyCreateTestPage />} />
+        <Route path="/faculty/tests/:testId/manage" element={<FacultyManageTestPage />} />
       </Routes>
     </BrowserRouter>
   );

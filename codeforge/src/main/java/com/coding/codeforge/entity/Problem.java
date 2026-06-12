@@ -28,6 +28,32 @@ public class Problem {
     @Column(columnDefinition = "TEXT")
     private String constraintsText;
 
+    /*
+     * Stores rich problem content as JSON.
+     *
+     * Example:
+     * {
+     *   "blocks": [
+     *     { "type": "paragraph", "text": "Given an array..." },
+     *     { "type": "math", "text": "1 <= n <= 10^5" },
+     *     { "type": "image", "url": "/uploads/problem-images/abc.png", "caption": "Tree" }
+     *   ]
+     * }
+     */
+    @Column(columnDefinition = "LONGTEXT")
+    private String contentJson;
+
+    /*
+     * true  -> available in global problem bank
+     * false -> created only for one test
+     */
+    private Boolean reusable = true;
+
+    /*
+     * If reusable=false, this tells for which test this problem was created.
+     */
+    private Long createdForTestId;
+
     private LocalDateTime createdAt = LocalDateTime.now();
 
     public Problem() {}
@@ -60,6 +86,18 @@ public class Problem {
         return constraintsText;
     }
 
+    public String getContentJson() {
+        return contentJson;
+    }
+
+    public Boolean getReusable() {
+        return reusable;
+    }
+
+    public Long getCreatedForTestId() {
+        return createdForTestId;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -90,6 +128,18 @@ public class Problem {
 
     public void setConstraintsText(String constraintsText) {
         this.constraintsText = constraintsText;
+    }
+
+    public void setContentJson(String contentJson) {
+        this.contentJson = contentJson;
+    }
+
+    public void setReusable(Boolean reusable) {
+        this.reusable = reusable;
+    }
+
+    public void setCreatedForTestId(Long createdForTestId) {
+        this.createdForTestId = createdForTestId;
     }
 
     public void setCreatedAt(LocalDateTime createdAt) {

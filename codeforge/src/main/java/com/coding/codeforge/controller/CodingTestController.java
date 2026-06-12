@@ -8,6 +8,7 @@ import com.coding.codeforge.service.CodingTestService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -43,6 +44,27 @@ public class CodingTestController {
         return codingTestService.addProblemToTest(testId, request);
     }
 
+    @PostMapping("/faculty/tests/{testId}/problems/create-and-attach")
+    public TestProblem createProblemAndAttach(
+            @PathVariable Long testId,
+            @RequestBody CreateProblemForTestRequest request
+    ) {
+        return codingTestService.createProblemAndAttach(testId, request);
+    }
+
+    @DeleteMapping("/faculty/tests/{testId}/problems/{problemId}")
+    public Map<String, Object> removeProblemFromTest(
+            @PathVariable Long testId,
+            @PathVariable Long problemId
+    ) {
+        codingTestService.removeProblemFromTest(testId, problemId);
+
+        return Map.of(
+                "success", true,
+                "message", "Problem removed from test"
+        );
+    }
+
     @GetMapping("/tests/{testId}/problems")
     public List<TestProblem> getProblemsForTest(@PathVariable Long testId) {
         return codingTestService.getProblemsForTest(testId);
@@ -69,5 +91,23 @@ public class CodingTestController {
     @GetMapping("/faculty/tests/{testId}/participants")
     public List<TestParticipant> getParticipantsForTest(@PathVariable Long testId) {
         return codingTestService.getParticipantsForTest(testId);
+    }
+
+    @PostMapping("/tests/{testId}/participants/{participantId}/start")
+    public ParticipantResponse startParticipantTest(
+            @PathVariable Long testId,
+            @PathVariable Long participantId
+    ) {
+        return codingTestService.startParticipantTest(testId, participantId);
+    }
+
+    @PostMapping("/tests/{testId}/participants/{participantId}/disqualify")
+    public ParticipantResponse disqualifyParticipant(
+            @PathVariable Long testId,
+            @PathVariable Long participantId,
+            @RequestBody(required = false) ParticipantStatusRequest request
+    ) {
+        String reason = request == null ? "Fullscreen exited" : request.getReason();
+        return codingTestService.disqualifyParticipant(testId, participantId, reason);
     }
 }
