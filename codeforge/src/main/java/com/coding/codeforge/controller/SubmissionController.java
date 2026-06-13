@@ -1,5 +1,7 @@
 package com.coding.codeforge.controller;
 
+import com.coding.codeforge.DTO.FacultySubmissionDetailResponse;
+import com.coding.codeforge.DTO.FacultyTestResultDashboardResponse;
 import com.coding.codeforge.DTO.ProblemStatusResponse;
 import com.coding.codeforge.service.SubmissionService;
 import org.springframework.web.bind.annotation.*;
@@ -23,5 +25,19 @@ public class SubmissionController {
             @PathVariable Long participantId
     ) {
         return submissionService.getProblemStatusForParticipant(testId, participantId);
+    }
+
+    @GetMapping("/faculty/tests/{testId}/results")
+    public FacultyTestResultDashboardResponse getFacultyTestResults(
+            @PathVariable Long testId
+    ) {
+        return submissionService.getFacultyTestResultDashboard(testId);
+    }
+
+    @GetMapping("/faculty/submissions/{submissionId}")
+    public FacultySubmissionDetailResponse getFacultySubmissionDetail(
+            @PathVariable Long submissionId
+    ) {
+        return submissionService.getFacultySubmissionDetail(submissionId);
     }
 }

@@ -1,22 +1,12 @@
 package com.coding.codeforge.service;
 
-import com.coding.codeforge.DTO.CodeRequest;
-import com.coding.codeforge.DTO.ProblemStatusResponse;
-import com.coding.codeforge.DTO.SubmissionResponse;
-import com.coding.codeforge.entity.CodingTest;
-import com.coding.codeforge.entity.Problem;
-import com.coding.codeforge.entity.Submission;
-import com.coding.codeforge.entity.TestParticipant;
-import com.coding.codeforge.repository.CodingTestRepository;
-import com.coding.codeforge.repository.ProblemRepository;
-import com.coding.codeforge.repository.SubmissionRepository;
-import com.coding.codeforge.repository.TestParticipantRepository;
+import com.coding.codeforge.DTO.*;
+import com.coding.codeforge.entity.*;
+import com.coding.codeforge.repository.*;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class SubmissionService {
@@ -25,17 +15,20 @@ public class SubmissionService {
     private final CodingTestRepository codingTestRepository;
     private final ProblemRepository problemRepository;
     private final TestParticipantRepository testParticipantRepository;
+    private final TestProblemRepository testProblemRepository;
 
     public SubmissionService(
             SubmissionRepository submissionRepository,
             CodingTestRepository codingTestRepository,
             ProblemRepository problemRepository,
-            TestParticipantRepository testParticipantRepository
+            TestParticipantRepository testParticipantRepository,
+            TestProblemRepository testProblemRepository
     ) {
         this.submissionRepository = submissionRepository;
         this.codingTestRepository = codingTestRepository;
         this.problemRepository = problemRepository;
         this.testParticipantRepository = testParticipantRepository;
+        this.testProblemRepository = testProblemRepository;
     }
 
     public SubmissionResponse saveContestSubmission(
@@ -139,6 +132,246 @@ public class SubmissionService {
         return statusMap;
     }
 
+    public FacultyTestResultDashboardResponse getFacultyTestResultDashboard(Long testId) {
+        CodingTest codingTest = codingTestRepository.findById(testId)
+                .orElseThrow(() -> new RuntimeException("Coding test not found"));
+
+        List<TestProblem> attachedProblems =
+                testProblemRepository.findByCodingTest_IdOrderByProblemOrderAsc(testId);
+
+        List<TestParticipant> participants =
+                testParticipantRepository.findByCodingTestId(testId);
+
+        List<Submission> submissions =
+                submissionRepository.findByCodingTest_IdOrderBySubmittedAtDesc(testId);
+
+        Map<Long, List<Submission>> submissionsByParticipant = new HashMap<>();
+
+        for (Submission submission : submissions) {
+            if (submission.getParticipant() == null || submission.getParticipant().getId() == null) {
+                continue;
+            }
+
+            Long participantId = submission.getParticipant().getId();
+
+            submissionsByParticipant
+                    .computeIfAbsent(participantId, key -> new ArrayList<>())
+                    .add(submission);
+        }
+
+        FacultyTestResultDashboardResponse response = new FacultyTestResultDashboardResponse();
+        response.setTestId(codingTest.getId());
+        response.setTitle(codingTest.getTitle());
+        response.setTestCode(codingTest.getTestCode());
+        response.setStartTime(codingTest.getStartTime());
+        response.setEndTime(codingTest.getEndTime());
+        response.setTotalProblems(attachedProblems.size());
+        response.setTotalParticipants(participants.size());
+        response.setTotalSubmissions(submissions.size());
+
+        int registered = 0;
+        int inProgress = 0;
+        int completed = 0;
+        int disqualified = 0;
+
+        List<FacultyParticipantResultResponse> participantResults = new ArrayList<>();
+
+        for (TestParticipant participant : participants) {
+            String status = normalizeStatus(participant.getStatus());
+
+            if ("REGISTERED".equals(status)) registered++;
+            else if ("IN_PROGRESS".equals(status)) inProgress++;
+            else if ("COMPLETED".equals(status) || "SUBMITTED".equals(status)) completed++;
+            else if ("DISQUALIFIED".equals(status)) disqualified++;
+
+            List<Submission> participantSubmissions =
+                    submissionsByParticipant.getOrDefault(participant.getId(), List.of());
+
+            participantResults.add(
+                    buildParticipantResult(participant, attachedProblems, participantSubmissions)
+            );
+        }
+
+        participantResults.sort((a, b) -> {
+            int scoreCompare = Integer.compare(
+                    b.getTotalScore() == null ? 0 : b.getTotalScore(),
+                    a.getTotalScore() == null ? 0 : a.getTotalScore()
+            );
+
+            if (scoreCompare != 0) return scoreCompare;
+
+            String aName = a.getRollNumber() != null ? a.getRollNumber() : safe(a.getName());
+            String bName = b.getRollNumber() != null ? b.getRollNumber() : safe(b.getName());
+
+            return aName.compareToIgnoreCase(bName);
+        });
+
+        response.setRegisteredCount(registered);
+        response.setInProgressCount(inProgress);
+        response.setCompletedCount(completed);
+        response.setDisqualifiedCount(disqualified);
+        response.setParticipants(participantResults);
+
+        return response;
+    }
+
+    public FacultySubmissionDetailResponse getFacultySubmissionDetail(Long submissionId) {
+        Submission submission = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new RuntimeException("Submission not found"));
+
+        FacultySubmissionDetailResponse response = new FacultySubmissionDetailResponse();
+
+        response.setSubmissionId(submission.getId());
+
+        if (submission.getCodingTest() != null) {
+            response.setTestId(submission.getCodingTest().getId());
+            response.setTestTitle(submission.getCodingTest().getTitle());
+        }
+
+        if (submission.getParticipant() != null) {
+            response.setParticipantId(submission.getParticipant().getId());
+            response.setParticipantName(submission.getParticipant().getName());
+            response.setRollNumber(submission.getParticipant().getRollNumber());
+            response.setIdentifier(submission.getParticipant().getIdentifier());
+        }
+
+        if (submission.getProblem() != null) {
+            response.setProblemId(submission.getProblem().getId());
+            response.setProblemTitle(submission.getProblem().getTitle());
+        }
+
+        response.setLanguage(submission.getLanguage());
+        response.setStatus(submission.getStatus());
+        response.setScore(submission.getScore());
+        response.setPassedTestCases(submission.getPassedTestCases());
+        response.setTotalTestCases(submission.getTotalTestCases());
+        response.setFailedTestCase(submission.getFailedTestCase());
+        response.setCode(submission.getCode());
+        response.setOutput(submission.getOutput());
+        response.setError(submission.getError());
+        response.setSubmittedAt(submission.getSubmittedAt());
+
+        return response;
+    }
+
+    private FacultyParticipantResultResponse buildParticipantResult(
+            TestParticipant participant,
+            List<TestProblem> attachedProblems,
+            List<Submission> participantSubmissions
+    ) {
+        FacultyParticipantResultResponse response = new FacultyParticipantResultResponse();
+
+        response.setParticipantId(participant.getId());
+        response.setParticipantType(participant.getParticipantType() == null ? null : participant.getParticipantType().name());
+        response.setRollNumber(participant.getRollNumber());
+        response.setName(participant.getName());
+        response.setEmail(participant.getEmail());
+        response.setIdentifier(participant.getIdentifier());
+        response.setStatus(participant.getStatus());
+        response.setStartedAt(participant.getStartedAt());
+        response.setSubmittedAt(participant.getSubmittedAt());
+
+        response.setTotalProblems(attachedProblems.size());
+        response.setMaxScore(attachedProblems.size() * 100);
+
+        if (!participantSubmissions.isEmpty()) {
+            Submission latest = participantSubmissions.get(0);
+            response.setLatestSubmissionId(latest.getId());
+            response.setLatestSubmissionStatus(latest.getStatus());
+            response.setLatestSubmittedAt(latest.getSubmittedAt());
+
+            if (latest.getProblem() != null) {
+                response.setLatestSubmissionProblemTitle(latest.getProblem().getTitle());
+            }
+        }
+
+        Map<Long, List<Submission>> byProblem = new HashMap<>();
+
+        for (Submission submission : participantSubmissions) {
+            if (submission.getProblem() == null || submission.getProblem().getId() == null) {
+                continue;
+            }
+
+            byProblem
+                    .computeIfAbsent(submission.getProblem().getId(), key -> new ArrayList<>())
+                    .add(submission);
+        }
+
+        List<FacultyProblemResultResponse> problemResults = new ArrayList<>();
+
+        int solved = 0;
+        int attempted = 0;
+        int totalScore = 0;
+
+        for (TestProblem testProblem : attachedProblems) {
+            if (testProblem.getProblem() == null) continue;
+
+            Problem problem = testProblem.getProblem();
+            List<Submission> problemSubmissions =
+                    byProblem.getOrDefault(problem.getId(), List.of());
+
+            FacultyProblemResultResponse problemResult =
+                    buildProblemResult(problem, problemSubmissions);
+
+            if ("ACCEPTED".equals(problemResult.getProblemStatus())) {
+                solved++;
+            }
+
+            if ("ATTEMPTED".equals(problemResult.getProblemStatus())) {
+                attempted++;
+            }
+
+            totalScore += safeScore(problemResult.getBestScore());
+            problemResults.add(problemResult);
+        }
+
+        response.setSolvedCount(solved);
+        response.setAttemptedCount(attempted);
+        response.setTotalScore(totalScore);
+        response.setProblems(problemResults);
+
+        return response;
+    }
+
+    private FacultyProblemResultResponse buildProblemResult(
+            Problem problem,
+            List<Submission> submissions
+    ) {
+        FacultyProblemResultResponse response = new FacultyProblemResultResponse();
+
+        response.setProblemId(problem.getId());
+        response.setProblemTitle(problem.getTitle());
+        response.setDifficulty(problem.getDifficulty());
+        response.setAttempts(submissions.size());
+        response.setBestScore(0);
+        response.setProblemStatus("NOT_STARTED");
+
+        if (submissions.isEmpty()) {
+            return response;
+        }
+
+        response.setProblemStatus("ATTEMPTED");
+
+        Submission latest = submissions.get(0);
+        response.setLatestSubmissionId(latest.getId());
+        response.setLatestSubmissionStatus(latest.getStatus());
+        response.setLatestSubmittedAt(latest.getSubmittedAt());
+
+        for (Submission submission : submissions) {
+            response.setBestScore(Math.max(response.getBestScore(), safeScore(submission.getScore())));
+
+            if (isAcceptedStatus(submission.getStatus())) {
+                response.setProblemStatus("ACCEPTED");
+
+                if (response.getAcceptedSubmissionId() == null) {
+                    response.setAcceptedSubmissionId(submission.getId());
+                }
+            }
+        }
+
+        return response;
+    }
+
     public SubmissionResponse toResponse(Submission submission) {
         return new SubmissionResponse(
                 submission.getId(),
@@ -221,6 +454,15 @@ public class SubmissionService {
 
     private int safeScore(Integer score) {
         return score == null ? 0 : score;
+    }
+
+    private String normalizeStatus(String status) {
+        if (status == null || status.isBlank()) return "REGISTERED";
+        return status.trim().toUpperCase();
+    }
+
+    private String safe(String value) {
+        return value == null ? "" : value;
     }
 
     private String extractString(Map<String, Object> map, String key, String fallback) {

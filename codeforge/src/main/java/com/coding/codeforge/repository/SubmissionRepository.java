@@ -10,6 +10,8 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
 
     List<Submission> findByCodingTest_Id(Long testId);
 
+    List<Submission> findByCodingTest_IdOrderBySubmittedAtDesc(Long testId);
+
     List<Submission> findByParticipant_Id(Long participantId);
 
     List<Submission> findByProblem_Id(Long problemId);

@@ -11,6 +11,7 @@ import {
   CalendarClock,
   ExternalLink,
   BookOpen,
+  BarChart3,
 } from "lucide-react";
 import { apiGet } from "../api";
 
@@ -128,7 +129,9 @@ export default function FacultyDashboard() {
           </button>
 
           <div
-            className={`hidden md:block h-7 w-px ${isDark ? "bg-white/10" : "bg-slate-200"}`}
+            className={`hidden md:block h-7 w-px ${
+              isDark ? "bg-white/10" : "bg-slate-200"
+            }`}
           />
 
           <div className="hidden md:block">
@@ -164,7 +167,9 @@ export default function FacultyDashboard() {
             className={`rounded-3xl border p-8 relative overflow-hidden ${cardClass}`}
           >
             <div
-              className={`absolute -right-20 -top-20 h-72 w-72 rounded-full blur-3xl ${isDark ? "bg-blue-500/20" : "bg-blue-200/70"}`}
+              className={`absolute -right-20 -top-20 h-72 w-72 rounded-full blur-3xl ${
+                isDark ? "bg-blue-500/20" : "bg-blue-200/70"
+              }`}
             />
 
             <div className="relative">
@@ -178,13 +183,13 @@ export default function FacultyDashboard() {
               <h1 className="text-5xl font-black leading-tight mb-4">
                 Create tests.
                 <br />
-                <span className="text-[#58A6FF]">Track participants.</span>
+                <span className="text-[#58A6FF]">Track results.</span>
               </h1>
 
               <p className={`text-lg leading-8 max-w-2xl ${muted}`}>
-                Build coding tests with password access, choose college-only or
-                external mode, attach DSA problems, and share the test code with
-                students.
+                Build coding tests with password access, attach DSA problems,
+                monitor submissions, and view participant-wise results from the
+                faculty result dashboard.
               </p>
 
               <div className="flex flex-wrap gap-3 mt-7">
@@ -215,23 +220,23 @@ export default function FacultyDashboard() {
 
             <div className={`rounded-3xl border p-5 ${cardClass}`}>
               <Users className="text-[#58A6FF] mb-3" size={22} />
-              <div className="text-3xl font-black">—</div>
-              <div className={`text-sm mt-1 ${muted}`}>Participants later</div>
+              <div className="text-3xl font-black">Live</div>
+              <div className={`text-sm mt-1 ${muted}`}>Participants tracked</div>
             </div>
 
             <div className={`rounded-3xl border p-5 ${cardClass}`}>
-              <BookOpen className="text-[#58A6FF] mb-3" size={22} />
-              <div className="text-3xl font-black">DB</div>
-              <div className={`text-sm mt-1 ${muted}`}>
-                Problems from backend
-              </div>
+              <BarChart3 className="text-[#58A6FF] mb-3" size={22} />
+              <div className="text-3xl font-black">CSV</div>
+              <div className={`text-sm mt-1 ${muted}`}>Result export ready</div>
             </div>
           </div>
         </section>
 
         <section className={`rounded-3xl border overflow-hidden ${cardClass}`}>
           <div
-            className={`px-6 py-5 border-b ${isDark ? "border-white/10" : "border-slate-200"}`}
+            className={`px-6 py-5 border-b ${
+              isDark ? "border-white/10" : "border-slate-200"
+            }`}
           >
             <div className="flex items-center justify-between">
               <div>
@@ -267,7 +272,7 @@ export default function FacultyDashboard() {
                 return (
                   <div
                     key={test.id}
-                    className={`grid lg:grid-cols-[1fr_180px_180px_190px] gap-4 px-6 py-5 border-b items-center ${
+                    className={`grid xl:grid-cols-[1fr_180px_180px_300px] gap-4 px-6 py-5 border-b items-center ${
                       isDark
                         ? "border-white/5 hover:bg-white/[0.03]"
                         : "border-slate-100 hover:bg-slate-50"
@@ -277,7 +282,9 @@ export default function FacultyDashboard() {
                       <div className="flex flex-wrap items-center gap-3">
                         <h3 className="font-bold text-lg">{test.title}</h3>
                         <span
-                          className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${statusClass(status)}`}
+                          className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${statusClass(
+                            status,
+                          )}`}
                         >
                           {status}
                         </span>
@@ -315,7 +322,7 @@ export default function FacultyDashboard() {
                       </button>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => navigate(`/test-access`)}
                         className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition flex items-center gap-2"
@@ -330,7 +337,18 @@ export default function FacultyDashboard() {
                         }
                         className={`h-10 px-4 rounded-xl border text-sm font-semibold transition ${softButton}`}
                       >
+                        <BookOpen size={15} />
                         Manage
+                      </button>
+
+                      <button
+                        onClick={() =>
+                          navigate(`/faculty/tests/${test.id}/results`)
+                        }
+                        className={`h-10 px-4 rounded-xl border text-sm font-semibold transition ${softButton}`}
+                      >
+                        <BarChart3 size={15} />
+                        Results
                       </button>
                     </div>
                   </div>
