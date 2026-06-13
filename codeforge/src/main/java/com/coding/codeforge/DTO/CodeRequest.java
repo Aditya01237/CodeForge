@@ -6,12 +6,60 @@ public class CodeRequest {
     private String language;
     private Long problemId;
 
-    public String getCode() { return code; }
-    public void setCode(String code) { this.code = code; }
+    // Used only in contest/test mode
+    private Long testId;
+    private Long participantId;
 
-    public String getLanguage() { return language; }
-    public void setLanguage(String language) { this.language = language; }
+    // We will use this later for custom input run
+    private String input;
 
-    public Long getProblemId() { return problemId; }
-    public void setProblemId(Long problemId) { this.problemId = problemId; }
+    public CodeRequest() {}
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    public String getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(String language) {
+        this.language = language;
+    }
+
+    public Long getProblemId() {
+        return problemId;
+    }
+
+    public void setProblemId(Long problemId) {
+        this.problemId = problemId;
+    }
+
+    public Long getTestId() {
+        return testId;
+    }
+
+    public void setTestId(Long testId) {
+        this.testId = testId;
+    }
+
+    public Long getParticipantId() {
+        return participantId;
+    }
+
+    public void setParticipantId(Long participantId) {
+        this.participantId = participantId;
+    }
+
+    public String getInput() {
+        return input;
+    }
+
+    public void setInput(String input) {
+        this.input = input;
+    }
 }

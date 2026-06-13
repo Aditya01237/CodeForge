@@ -6,6 +6,7 @@ import TopBar from "../components/TopBar";
 import ProblemPanel from "../components/ProblemPanel";
 import EditorPanel from "../components/EditorPanel";
 import BottomPanel from "../components/BottomPanel";
+import ContestFullscreenGuard from "../components/ContestFullscreenGuard";
 import { STARTERS } from "../data/codeTemplates";
 
 export default function ProblemPage() {
@@ -54,6 +55,20 @@ export default function ProblemPage() {
     if (selectedLang === "Python") return "python";
     if (selectedLang === "Java") return "java";
     return "cpp";
+  };
+
+  const getCurrentParticipantId = () => {
+    if (mode !== "test") return null;
+
+    try {
+      const participant = JSON.parse(
+        localStorage.getItem("cf_participant") || "null",
+      );
+
+      return participant?.participantId || null;
+    } catch {
+      return null;
+    }
   };
 
   const isTestExpired = () => {
@@ -113,35 +128,6 @@ export default function ProblemPage() {
     setCode(STARTERS[lang] || "");
   }, [lang]);
 
-  const saveTestProblemStatus = (problemId, resultStatus) => {
-    if (mode !== "test" || !testId || !problemId) return;
-
-    const key = `cf_test_problem_status_${testId}`;
-    const raw = localStorage.getItem(key);
-
-    let current = {};
-
-    try {
-      current = raw ? JSON.parse(raw) : {};
-    } catch {
-      current = {};
-    }
-
-    const normalized = String(resultStatus || "").toUpperCase();
-
-    const accepted =
-      normalized === "ACCEPTED" ||
-      normalized === "OK" ||
-      normalized === "PASS" ||
-      normalized === "PASSED";
-
-    current[String(problemId)] = accepted ? "ACCEPTED" : "ATTEMPTED";
-
-    localStorage.setItem(key, JSON.stringify(current));
-
-    window.dispatchEvent(new Event("storage"));
-  };
-
   const handleRun = async () => {
     if (isTestExpired()) {
       setOutput({
@@ -155,6 +141,7 @@ export default function ProblemPage() {
 
       return;
     }
+
     if (!problem?.id) return;
 
     setRunning(true);
@@ -192,26 +179,42 @@ export default function ProblemPage() {
 
       return;
     }
+
     if (!problem?.id) return;
+
+    const participantId = getCurrentParticipantId();
+
+    if (mode === "test" && (!testId || !participantId)) {
+      setOutput({
+        status: "Error",
+        message: "Participant session missing. Please enter the test again.",
+      });
+      return;
+    }
 
     setRunning(true);
     setOutput(null);
 
     try {
-      const data = await apiPost("/submit", {
+      const payload = {
         code,
         language: getLanguageKey(lang),
         problemId: problem.id,
-      });
+      };
+
+      if (mode === "test") {
+        payload.testId = Number(testId);
+        payload.participantId = participantId;
+      }
+
+      const data = await apiPost("/submit", payload);
 
       setOutput(data);
-      saveTestProblemStatus(problem.id, data.status);
     } catch (err) {
       setOutput({
         status: "Error",
         message: err.message || "Server error ❌",
       });
-      saveTestProblemStatus(problem.id, "ATTEMPTED");
     } finally {
       setRunning(false);
     }
@@ -283,6 +286,8 @@ export default function ProblemPage() {
 
   return (
     <div className={`flex flex-col h-screen overflow-hidden ${pageBg}`}>
+      {mode === "test" && <ContestFullscreenGuard testId={testId} />}
+
       <TopBar
         problem={problem}
         lang={lang}

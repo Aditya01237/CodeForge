@@ -1,5 +1,6 @@
 package com.coding.codeforge.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -14,27 +15,35 @@ public class Submission {
 
     private String language;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "LONGTEXT")
     private String code;
 
     private String status;
 
-    private Integer score;
+    private Integer score = 0;
 
-    @Column(columnDefinition = "TEXT")
+    private Integer passedTestCases = 0;
+
+    private Integer totalTestCases = 0;
+
+    private Integer failedTestCase;
+
+    @Column(columnDefinition = "LONGTEXT")
     private String output;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "LONGTEXT")
     private String error;
 
     private LocalDateTime submittedAt = LocalDateTime.now();
 
     @ManyToOne
-    @JoinColumn(name = "student_id")
-    private User student;
+    @JoinColumn(name = "participant_id")
+    @JsonIgnoreProperties({"codingTest"})
+    private TestParticipant participant;
 
     @ManyToOne
     @JoinColumn(name = "test_id")
+    @JsonIgnoreProperties({"createdBy", "testPassword"})
     private CodingTest codingTest;
 
     @ManyToOne
@@ -63,6 +72,18 @@ public class Submission {
         return score;
     }
 
+    public Integer getPassedTestCases() {
+        return passedTestCases;
+    }
+
+    public Integer getTotalTestCases() {
+        return totalTestCases;
+    }
+
+    public Integer getFailedTestCase() {
+        return failedTestCase;
+    }
+
     public String getOutput() {
         return output;
     }
@@ -75,8 +96,8 @@ public class Submission {
         return submittedAt;
     }
 
-    public User getStudent() {
-        return student;
+    public TestParticipant getParticipant() {
+        return participant;
     }
 
     public CodingTest getCodingTest() {
@@ -107,6 +128,18 @@ public class Submission {
         this.score = score;
     }
 
+    public void setPassedTestCases(Integer passedTestCases) {
+        this.passedTestCases = passedTestCases;
+    }
+
+    public void setTotalTestCases(Integer totalTestCases) {
+        this.totalTestCases = totalTestCases;
+    }
+
+    public void setFailedTestCase(Integer failedTestCase) {
+        this.failedTestCase = failedTestCase;
+    }
+
     public void setOutput(String output) {
         this.output = output;
     }
@@ -119,8 +152,8 @@ public class Submission {
         this.submittedAt = submittedAt;
     }
 
-    public void setStudent(User student) {
-        this.student = student;
+    public void setParticipant(TestParticipant participant) {
+        this.participant = participant;
     }
 
     public void setCodingTest(CodingTest codingTest) {

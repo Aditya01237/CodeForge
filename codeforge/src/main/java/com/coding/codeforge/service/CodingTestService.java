@@ -261,6 +261,7 @@ public class CodingTestService {
                 .orElse(null);
 
         if (existing != null) {
+            validateParticipantCanEnter(existing);
             return toParticipantResponse(existing);
         }
 
@@ -278,61 +279,6 @@ public class CodingTestService {
 
     public List<TestParticipant> getParticipantsForTest(Long testId) {
         return testParticipantRepository.findByCodingTestId(testId);
-    }
-
-    private int getNextProblemOrder(Long testId) {
-        return testProblemRepository.findByCodingTest_Id(testId)
-                .stream()
-                .map(TestProblem::getProblemOrder)
-                .filter(order -> order != null)
-                .max(Comparator.naturalOrder())
-                .orElse(0) + 1;
-    }
-
-    private void saveTestCases(Problem problem, List<TestCaseRequest> requests, boolean hidden) {
-        if (requests == null) return;
-
-        for (TestCaseRequest request : requests) {
-            if (request == null) continue;
-
-            String input = clean(request.getInputData());
-            String output = clean(request.getExpectedOutput());
-
-            if (input == null && output == null) continue;
-
-            TestCaseEntity testCase = new TestCaseEntity();
-            testCase.setProblem(problem);
-            testCase.setInputData(input == null ? "" : input);
-            testCase.setExpectedOutput(output == null ? "" : output);
-            testCase.setHidden(hidden);
-
-            testCaseRepository.save(testCase);
-        }
-    }
-
-    private void validateTimeWindow(CodingTest codingTest) {
-        LocalDateTime now = LocalDateTime.now();
-
-        if (codingTest.getStartTime() != null && now.isBefore(codingTest.getStartTime())) {
-            throw new RuntimeException("Test has not started yet");
-        }
-
-        if (codingTest.getEndTime() != null && now.isAfter(codingTest.getEndTime())) {
-            throw new RuntimeException("Test has ended");
-        }
-    }
-
-    private ParticipantResponse toParticipantResponse(TestParticipant participant) {
-        return new ParticipantResponse(
-                participant.getId(),
-                participant.getCodingTest().getId(),
-                participant.getParticipantType().name(),
-                participant.getRollNumber(),
-                participant.getName(),
-                participant.getEmail(),
-                participant.getIdentifier(),
-                participant.getStatus()
-        );
     }
 
     public ParticipantResponse startParticipantTest(Long testId, Long participantId) {
@@ -385,6 +331,48 @@ public class CodingTestService {
         return toParticipantResponse(testParticipantRepository.save(participant));
     }
 
+    private int getNextProblemOrder(Long testId) {
+        return testProblemRepository.findByCodingTest_Id(testId)
+                .stream()
+                .map(TestProblem::getProblemOrder)
+                .filter(order -> order != null)
+                .max(Comparator.naturalOrder())
+                .orElse(0) + 1;
+    }
+
+    private void saveTestCases(Problem problem, List<TestCaseRequest> requests, boolean hidden) {
+        if (requests == null) return;
+
+        for (TestCaseRequest request : requests) {
+            if (request == null) continue;
+
+            String input = clean(request.getInputData());
+            String output = clean(request.getExpectedOutput());
+
+            if (input == null && output == null) continue;
+
+            TestCaseEntity testCase = new TestCaseEntity();
+            testCase.setProblem(problem);
+            testCase.setInputData(input == null ? "" : input);
+            testCase.setExpectedOutput(output == null ? "" : output);
+            testCase.setHidden(hidden);
+
+            testCaseRepository.save(testCase);
+        }
+    }
+
+    private void validateTimeWindow(CodingTest codingTest) {
+        LocalDateTime now = LocalDateTime.now();
+
+        if (codingTest.getStartTime() != null && now.isBefore(codingTest.getStartTime())) {
+            throw new RuntimeException("Test has not started yet");
+        }
+
+        if (codingTest.getEndTime() != null && now.isAfter(codingTest.getEndTime())) {
+            throw new RuntimeException("Test has ended");
+        }
+    }
+
     private void validateParticipantCanEnter(TestParticipant participant) {
         String status = participant.getStatus();
 
@@ -399,6 +387,19 @@ public class CodingTestService {
         if ("SUBMITTED".equals(status) || "COMPLETED".equals(status)) {
             throw new RuntimeException("You have already completed this contest.");
         }
+    }
+
+    private ParticipantResponse toParticipantResponse(TestParticipant participant) {
+        return new ParticipantResponse(
+                participant.getId(),
+                participant.getCodingTest().getId(),
+                participant.getParticipantType().name(),
+                participant.getRollNumber(),
+                participant.getName(),
+                participant.getEmail(),
+                participant.getIdentifier(),
+                participant.getStatus()
+        );
     }
 
     private String clean(String value) {

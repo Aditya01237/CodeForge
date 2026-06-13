@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Circle,
+  RefreshCcw,
 } from "lucide-react";
 
 const MONO = "'JetBrains Mono', 'Fira Code', ui-monospace, monospace";
@@ -31,7 +32,7 @@ const formatRemainingTime = (ms) => {
 
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
     2,
-    "0"
+    "0",
   )}:${String(seconds).padStart(2, "0")}`;
 };
 
@@ -110,6 +111,7 @@ export default function TestProblemsPage() {
   const [participant, setParticipant] = useState(null);
   const [testProblems, setTestProblems] = useState([]);
   const [problemStatus, setProblemStatus] = useState({});
+  const [statusLoading, setStatusLoading] = useState(false);
   const [remainingMs, setRemainingMs] = useState(null);
   const [error, setError] = useState("");
 
@@ -161,33 +163,38 @@ export default function TestProblemsPage() {
       .catch(() => setError("Failed to load test problems."));
   }, [testId, navigate]);
 
-  useEffect(() => {
-    const key = `cf_test_problem_status_${testId}`;
-    const raw = localStorage.getItem(key);
+  const loadProblemStatus = async () => {
+    if (!testId || !participant?.participantId) return;
+
+    setStatusLoading(true);
 
     try {
-      setProblemStatus(raw ? JSON.parse(raw) : {});
-    } catch {
-      setProblemStatus({});
-    }
+      const data = await apiGet(
+        `/tests/${testId}/participants/${participant.participantId}/problem-status`,
+      );
 
-    const onStorage = () => {
-      const latest = localStorage.getItem(key);
-      try {
-        setProblemStatus(latest ? JSON.parse(latest) : {});
-      } catch {
-        setProblemStatus({});
-      }
+      setProblemStatus(data && typeof data === "object" ? data : {});
+    } catch (err) {
+      setError(err.message || "Failed to load problem status.");
+      setProblemStatus({});
+    } finally {
+      setStatusLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadProblemStatus();
+
+    const onFocus = () => {
+      loadProblemStatus();
     };
 
-    window.addEventListener("storage", onStorage);
-    window.addEventListener("focus", onStorage);
+    window.addEventListener("focus", onFocus);
 
     return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("focus", onStorage);
+      window.removeEventListener("focus", onFocus);
     };
-  }, [testId]);
+  }, [testId, participant?.participantId]);
 
   useEffect(() => {
     if (!test?.endTime) return;
@@ -209,7 +216,9 @@ export default function TestProblemsPage() {
     let solved = 0;
     let attempted = 0;
 
-    Object.values(problemStatus).forEach((status) => {
+    Object.values(problemStatus).forEach((item) => {
+      const status = item?.problemStatus || item;
+
       if (status === "ACCEPTED") solved++;
       else if (status === "ATTEMPTED") attempted++;
     });
@@ -269,9 +278,28 @@ export default function TestProblemsPage() {
     navigate(`/problem/${problemId}?mode=test&testId=${testId}`);
   };
 
+  const getStatusForProblem = (problemId) => {
+    const item = problemStatus[String(problemId)] || problemStatus[problemId];
+
+    if (!item) return "NOT_STARTED";
+
+    if (typeof item === "string") return item;
+
+    return item.problemStatus || "NOT_STARTED";
+  };
+
+  const getStatusDetailsForProblem = (problemId) => {
+    const item = problemStatus[String(problemId)] || problemStatus[problemId];
+
+    if (!item || typeof item === "string") return null;
+
+    return item;
+  };
+
   return (
     <div className={`min-h-screen ${pageClass}`}>
       <ContestFullscreenGuard testId={testId} />
+
       <nav
         className={`h-16 px-6 flex items-center justify-between border-b ${navClass}`}
       >
@@ -301,6 +329,17 @@ export default function TestProblemsPage() {
             {isExpired ? <Lock size={15} /> : <Clock size={15} />}
             {isExpired ? "ENDED" : formatRemainingTime(remainingMs || 0)}
           </div>
+
+          <button
+            onClick={loadProblemStatus}
+            disabled={statusLoading}
+            className={`hidden sm:flex h-10 px-4 rounded-xl border items-center gap-2 text-sm font-semibold transition ${softButton} ${
+              statusLoading ? "opacity-60 cursor-not-allowed" : ""
+            }`}
+          >
+            <RefreshCcw size={15} className={statusLoading ? "animate-spin" : ""} />
+            Refresh
+          </button>
 
           <button
             onClick={() => navigate("/")}
@@ -431,7 +470,7 @@ export default function TestProblemsPage() {
 
         <section className={`rounded-3xl border overflow-hidden ${cardClass}`}>
           <div
-            className={`hidden md:grid grid-cols-[80px_1fr_150px_150px_150px] px-5 py-4 text-xs uppercase tracking-[0.18em] border-b ${tableHeader}`}
+            className={`hidden md:grid grid-cols-[80px_1fr_150px_170px_150px] px-5 py-4 text-xs uppercase tracking-[0.18em] border-b ${tableHeader}`}
             style={{ fontFamily: MONO }}
           >
             <span>#</span>
@@ -448,13 +487,14 @@ export default function TestProblemsPage() {
           ) : (
             testProblems.map((item, index) => {
               const problem = item.problem;
-              const status = problemStatus[String(problem?.id)] || "NOT_STARTED";
+              const status = getStatusForProblem(problem?.id);
+              const details = getStatusDetailsForProblem(problem?.id);
               const statusMeta = getProblemStatusMeta(status, isDark);
 
               return (
                 <div
                   key={item.id || `${problem?.id}-${index}`}
-                  className={`grid md:grid-cols-[80px_1fr_150px_150px_150px] gap-3 md:gap-0 px-5 py-5 items-center border-b transition ${tableRow} ${statusMeta.row}`}
+                  className={`grid md:grid-cols-[80px_1fr_150px_170px_150px] gap-3 md:gap-0 px-5 py-5 items-center border-b transition ${tableRow} ${statusMeta.row}`}
                 >
                   <span
                     className="font-mono text-slate-500"
@@ -474,7 +514,7 @@ export default function TestProblemsPage() {
                     <span
                       className={`inline-flex items-center px-3 py-1 rounded-full border text-xs font-bold ${difficultyStyle(
                         problem?.difficulty,
-                        isDark
+                        isDark,
                       )}`}
                     >
                       {problem?.difficulty || "—"}
@@ -488,6 +528,13 @@ export default function TestProblemsPage() {
                       {statusMeta.icon}
                       {statusMeta.label}
                     </span>
+
+                    {details?.attempts > 0 && (
+                      <div className={`text-xs mt-1 ${muted}`}>
+                        Attempts: {details.attempts} · Score:{" "}
+                        {details.bestScore ?? 0}
+                      </div>
+                    )}
                   </span>
 
                   <button
