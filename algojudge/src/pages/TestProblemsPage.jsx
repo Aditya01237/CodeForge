@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import ContestFullscreenGuard from "../components/ContestFullscreenGuard";
-import { apiGet } from "../api";
+import { apiGet, apiPost } from "../api";
 import {
   Home,
   Moon,
@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   Circle,
   RefreshCcw,
+  LogOut,
 } from "lucide-react";
 
 const MONO = "'JetBrains Mono', 'Fira Code', ui-monospace, monospace";
@@ -103,6 +104,8 @@ export default function TestProblemsPage() {
   const { testId } = useParams();
   const navigate = useNavigate();
 
+  const autoCompleteRef = useRef(false);
+
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem("cf_theme") || "dark";
   });
@@ -112,6 +115,7 @@ export default function TestProblemsPage() {
   const [testProblems, setTestProblems] = useState([]);
   const [problemStatus, setProblemStatus] = useState({});
   const [statusLoading, setStatusLoading] = useState(false);
+  const [finishing, setFinishing] = useState(false);
   const [remainingMs, setRemainingMs] = useState(null);
   const [error, setError] = useState("");
 
@@ -212,6 +216,64 @@ export default function TestProblemsPage() {
     return () => clearInterval(interval);
   }, [test]);
 
+  const finishContest = async ({ auto = false } = {}) => {
+    if (!participant?.participantId || !testId) return;
+
+    if (!auto) {
+      const ok = window.confirm(
+        "Are you sure you want to finish the test? After finishing, you cannot enter or submit again.",
+      );
+
+      if (!ok) return;
+    }
+
+    if (finishing || autoCompleteRef.current) return;
+
+    autoCompleteRef.current = true;
+    setFinishing(true);
+    setError("");
+
+    try {
+      const updatedParticipant = await apiPost(
+        `/tests/${testId}/participants/${participant.participantId}/complete`,
+        {
+          reason: auto ? "Timer ended. Auto completed." : "Participant finished manually.",
+        },
+      );
+
+      localStorage.setItem("cf_participant", JSON.stringify(updatedParticipant));
+      localStorage.setItem(`cf_test_completed_${testId}`, "true");
+      localStorage.removeItem(`cf_test_started_${testId}`);
+
+      setParticipant(updatedParticipant);
+
+      if (document.fullscreenElement) {
+        try {
+          await document.exitFullscreen();
+        } catch {
+          // ignore fullscreen exit error
+        }
+      }
+
+      alert(auto ? "Time is over. Your test has been auto-submitted." : "Your test has been submitted successfully.");
+
+      navigate("/test-access", { replace: true });
+    } catch (err) {
+      autoCompleteRef.current = false;
+      setError(err.message || "Failed to finish test.");
+    } finally {
+      setFinishing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!participant?.participantId) return;
+    if (remainingMs === null) return;
+    if (remainingMs > 0) return;
+
+    finishContest({ auto: true });
+  }, [remainingMs, participant?.participantId]);
+
   const statusCounts = useMemo(() => {
     let solved = 0;
     let attempted = 0;
@@ -256,6 +318,10 @@ export default function TestProblemsPage() {
     ? "border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]"
     : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100";
 
+  const dangerButton = isDark
+    ? "border-rose-400/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20"
+    : "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100";
+
   const muted = isDark ? "text-slate-400" : "text-slate-600";
 
   const tableHeader = isDark
@@ -273,7 +339,7 @@ export default function TestProblemsPage() {
       : "border-blue-400/30 bg-blue-500/10 text-[#58A6FF]";
 
   const openProblem = (problemId) => {
-    if (isExpired) return;
+    if (isExpired || finishing) return;
 
     navigate(`/problem/${problemId}?mode=test&testId=${testId}`);
   };
@@ -306,7 +372,10 @@ export default function TestProblemsPage() {
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate(`/test/${testId}/lobby`)}
-            className={`h-10 w-10 rounded-xl border flex items-center justify-center transition ${softButton}`}
+            disabled={finishing}
+            className={`h-10 w-10 rounded-xl border flex items-center justify-center transition ${softButton} ${
+              finishing ? "opacity-60 cursor-not-allowed" : ""
+            }`}
             title="Back to lobby"
           >
             <ArrowLeft size={17} />
@@ -314,6 +383,7 @@ export default function TestProblemsPage() {
 
           <button
             onClick={() => navigate("/")}
+            disabled={finishing}
             className="text-xl font-bold text-[#58A6FF]"
             style={{ fontFamily: MONO }}
           >
@@ -327,14 +397,14 @@ export default function TestProblemsPage() {
             style={{ fontFamily: MONO }}
           >
             {isExpired ? <Lock size={15} /> : <Clock size={15} />}
-            {isExpired ? "ENDED" : formatRemainingTime(remainingMs || 0)}
+            {isExpired ? "ENDING..." : formatRemainingTime(remainingMs || 0)}
           </div>
 
           <button
             onClick={loadProblemStatus}
-            disabled={statusLoading}
+            disabled={statusLoading || finishing}
             className={`hidden sm:flex h-10 px-4 rounded-xl border items-center gap-2 text-sm font-semibold transition ${softButton} ${
-              statusLoading ? "opacity-60 cursor-not-allowed" : ""
+              statusLoading || finishing ? "opacity-60 cursor-not-allowed" : ""
             }`}
           >
             <RefreshCcw size={15} className={statusLoading ? "animate-spin" : ""} />
@@ -342,7 +412,19 @@ export default function TestProblemsPage() {
           </button>
 
           <button
+            onClick={() => finishContest({ auto: false })}
+            disabled={finishing}
+            className={`h-10 px-4 rounded-xl border flex items-center gap-2 text-sm font-semibold transition ${dangerButton} ${
+              finishing ? "opacity-60 cursor-not-allowed" : ""
+            }`}
+          >
+            <LogOut size={15} />
+            {finishing ? "Finishing..." : "Finish Test"}
+          </button>
+
+          <button
             onClick={() => navigate("/")}
+            disabled={finishing}
             className={`hidden sm:flex h-10 px-4 rounded-xl border items-center gap-2 text-sm font-semibold transition ${softButton}`}
           >
             <Home size={15} />
@@ -351,6 +433,7 @@ export default function TestProblemsPage() {
 
           <button
             onClick={() => setTheme(isDark ? "light" : "dark")}
+            disabled={finishing}
             className={`h-10 px-4 rounded-xl border flex items-center gap-2 text-sm font-semibold transition ${softButton}`}
           >
             {isDark ? <Sun size={15} /> : <Moon size={15} />}
@@ -403,14 +486,14 @@ export default function TestProblemsPage() {
               </span>
 
               <span className={`px-3 py-1 rounded-full border ${timerClass}`}>
-                {isExpired ? "Test closed" : "Time left"}:{" "}
+                {isExpired ? "Auto submitting" : "Time left"}:{" "}
                 {isExpired ? "00:00:00" : formatRemainingTime(remainingMs || 0)}
               </span>
             </div>
 
             {isExpired && (
               <div className="mt-5 rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-4 text-sm text-rose-500">
-                Test time is over. Problem solving is now disabled.
+                Test time is over. Your test is being auto-submitted.
               </div>
             )}
           </div>
@@ -457,6 +540,13 @@ export default function TestProblemsPage() {
                     </div>
                   </div>
                 )}
+
+                <div className={`text-sm mt-3 ${muted}`}>
+                  Status:{" "}
+                  <span className="font-semibold text-[#58A6FF]">
+                    {participant.status || "IN_PROGRESS"}
+                  </span>
+                </div>
               </div>
             </div>
           </aside>
@@ -539,15 +629,15 @@ export default function TestProblemsPage() {
 
                   <button
                     onClick={() => openProblem(problem.id)}
-                    disabled={isExpired}
+                    disabled={isExpired || finishing}
                     className={`h-10 rounded-xl text-white text-sm font-semibold transition flex items-center justify-center gap-2 ${
-                      isExpired
+                      isExpired || finishing
                         ? "bg-slate-500 cursor-not-allowed opacity-60"
                         : "bg-blue-600 hover:bg-blue-700"
                     }`}
                   >
-                    {isExpired ? <Lock size={15} /> : <Play size={15} />}
-                    {isExpired ? "Closed" : "Solve"}
+                    {isExpired || finishing ? <Lock size={15} /> : <Play size={15} />}
+                    {isExpired || finishing ? "Closed" : "Solve"}
                   </button>
                 </div>
               );

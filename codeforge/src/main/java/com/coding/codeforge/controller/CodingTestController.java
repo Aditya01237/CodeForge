@@ -101,6 +101,16 @@ public class CodingTestController {
         return codingTestService.startParticipantTest(testId, participantId);
     }
 
+    @PostMapping("/tests/{testId}/participants/{participantId}/complete")
+    public ParticipantResponse completeParticipantTest(
+            @PathVariable Long testId,
+            @PathVariable Long participantId,
+            @RequestBody(required = false) ParticipantStatusRequest request
+    ) {
+        String reason = request == null ? "Contest completed" : request.getReason();
+        return codingTestService.completeParticipantTest(testId, participantId, reason);
+    }
+
     @PostMapping("/tests/{testId}/participants/{participantId}/disqualify")
     public ParticipantResponse disqualifyParticipant(
             @PathVariable Long testId,

@@ -309,6 +309,31 @@ public class CodingTestService {
         }
 
         participant.setStatus("IN_PROGRESS");
+        participant.setStartedAt(LocalDateTime.now());
+
+        return toParticipantResponse(testParticipantRepository.save(participant));
+    }
+
+    public ParticipantResponse completeParticipantTest(Long testId, Long participantId, String reason) {
+        TestParticipant participant = testParticipantRepository.findById(participantId)
+                .orElseThrow(() -> new RuntimeException("Participant not found"));
+
+        if (!participant.getCodingTest().getId().equals(testId)) {
+            throw new RuntimeException("Participant does not belong to this test");
+        }
+
+        String status = participant.getStatus();
+
+        if ("DISQUALIFIED".equals(status)) {
+            throw new RuntimeException("You are disqualified from this contest.");
+        }
+
+        if ("COMPLETED".equals(status) || "SUBMITTED".equals(status)) {
+            return toParticipantResponse(participant);
+        }
+
+        participant.setStatus("COMPLETED");
+        participant.setSubmittedAt(LocalDateTime.now());
 
         return toParticipantResponse(testParticipantRepository.save(participant));
     }

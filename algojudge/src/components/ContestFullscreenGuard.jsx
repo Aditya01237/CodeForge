@@ -11,7 +11,11 @@ export default function ContestFullscreenGuard({ testId }) {
 
     const participantRaw = localStorage.getItem("cf_participant");
     const started = localStorage.getItem(`cf_test_started_${testId}`);
+    const completed = localStorage.getItem(`cf_test_completed_${testId}`);
+    const blocked = localStorage.getItem(`cf_test_blocked_${testId}`);
 
+    if (completed === "true") return;
+    if (blocked === "true") return;
     if (!participantRaw || started !== "true") return;
 
     let participant = null;
@@ -24,7 +28,16 @@ export default function ContestFullscreenGuard({ testId }) {
 
     if (!participant?.participantId) return;
 
+    const status = String(participant.status || "").toUpperCase();
+
+    if (status === "COMPLETED" || status === "SUBMITTED" || status === "DISQUALIFIED") {
+      return;
+    }
+
     const disqualify = async () => {
+      const completedNow = localStorage.getItem(`cf_test_completed_${testId}`);
+      if (completedNow === "true") return;
+
       if (markingRef.current) return;
       markingRef.current = true;
 
@@ -33,13 +46,14 @@ export default function ContestFullscreenGuard({ testId }) {
           `/tests/${testId}/participants/${participant.participantId}/disqualify`,
           {
             reason: "Participant exited fullscreen mode during contest.",
-          }
+          },
         );
       } catch {
         // Even if backend fails, block locally.
       }
 
       localStorage.setItem(`cf_test_blocked_${testId}`, "true");
+      localStorage.removeItem(`cf_test_started_${testId}`);
       localStorage.removeItem("cf_participant");
 
       alert("You exited fullscreen mode. You are now out of the contest.");
