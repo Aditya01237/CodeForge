@@ -32,6 +32,7 @@ export default function ProblemPage() {
 
   const draggingVertical = useRef(false);
   const draggingHorizontal = useRef(false);
+  const loadingSavedCode = useRef(false);
 
   const [lang, setLang] = useState("C++");
   const [running, setRunning] = useState(false);
@@ -55,6 +56,13 @@ export default function ProblemPage() {
     if (selectedLang === "Python") return "python";
     if (selectedLang === "Java") return "java";
     return "cpp";
+  };
+
+  const getCodeStorageKey = (problemId = id, selectedLang = lang) => {
+    const scope = mode === "test" && testId ? `test-${testId}` : "practice";
+    const language = encodeURIComponent(selectedLang);
+
+    return `cf_code_${scope}_problem-${problemId}_${language}`;
   };
 
   const getCurrentParticipantId = () => {
@@ -125,8 +133,21 @@ export default function ProblemPage() {
   }, [problem]);
 
   useEffect(() => {
-    setCode(STARTERS[lang] || "");
-  }, [lang]);
+    const storageKey = getCodeStorageKey(id, lang);
+    const savedCode = localStorage.getItem(storageKey);
+
+    loadingSavedCode.current = true;
+    setCode(savedCode ?? STARTERS[lang] ?? "");
+  }, [id, lang, mode, testId]);
+
+  useEffect(() => {
+    if (loadingSavedCode.current) {
+      loadingSavedCode.current = false;
+      return;
+    }
+
+    localStorage.setItem(getCodeStorageKey(id, lang), code);
+  }, [code, id, lang, mode, testId]);
 
   const handleRun = async () => {
     if (isTestExpired()) {
