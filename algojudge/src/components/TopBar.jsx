@@ -8,9 +8,11 @@ import {
   Sun,
   Moon,
   Lock,
+  ArrowLeft,
 } from "lucide-react";
 
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { getProblemBackPath, routes } from "../utils/navigation";
 
 const MONO = "'JetBrains Mono', 'Fira Code', ui-monospace, monospace";
 
@@ -43,8 +45,12 @@ export default function TopBar({
 
   const [remainingMs, setRemainingMs] = useState(null);
 
+  const isDark = theme === "dark";
+  const isTestMode = mode === "test";
+  const isExpired = isTestMode && remainingMs !== null && remainingMs <= 0;
+
   const testAccess = useMemo(() => {
-    if (mode !== "test") return null;
+    if (!isTestMode) return null;
 
     try {
       const raw = localStorage.getItem("cf_test_access");
@@ -52,19 +58,16 @@ export default function TopBar({
     } catch {
       return null;
     }
-  }, [mode]);
+  }, [isTestMode]);
 
-  let participant = null;
-
-  try {
-    participant = JSON.parse(localStorage.getItem("cf_participant") || "null");
-  } catch {
-    participant = null;
-  }
-
-  const isDark = theme === "dark";
-  const isTestMode = mode === "test";
-  const isExpired = isTestMode && remainingMs !== null && remainingMs <= 0;
+  const participant = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("cf_participant");
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }, []);
 
   useEffect(() => {
     if (!isTestMode || !testAccess?.endTime) {
@@ -97,12 +100,11 @@ export default function TopBar({
   }, [isExpired, testId, navigate]);
 
   const goBack = () => {
-    if (mode === "test" && testId) {
-      navigate(`/test/${testId}/problems`);
-      return;
-    }
+    navigate(getProblemBackPath({ mode, testId }));
+  };
 
-    navigate("/");
+  const goHome = () => {
+    navigate(routes.home);
   };
 
   const safeRun = () => {
@@ -152,24 +154,27 @@ export default function TopBar({
     <div
       className={`h-16 shrink-0 border-b px-5 flex items-center justify-between ${wrapperClass}`}
     >
-      <div className="flex items-center gap-4">
+      {/* LEFT */}
+      <div className="flex items-center gap-3">
         <button
           onClick={goBack}
           className={`h-10 w-10 rounded-xl border flex items-center justify-center transition ${softButtonClass}`}
-          title="Back"
+          title={isTestMode ? "Back to test problems" : "Back to dashboard"}
         >
-          <Home size={17} />
+          {isTestMode ? <ArrowLeft size={17} /> : <Home size={17} />}
         </button>
 
         <button
-          onClick={() => navigate("/")}
+          onClick={goHome}
           className="text-[21px] font-bold tracking-wide text-[#58A6FF]"
           style={{ fontFamily: MONO }}
+          title="Go to dashboard"
         >
           CodeForge
         </button>
       </div>
 
+      {/* CENTER */}
       <div className="flex items-center gap-3">
         <button
           onClick={safeRun}
@@ -207,6 +212,7 @@ export default function TopBar({
         </button>
       </div>
 
+      {/* RIGHT */}
       <div className="flex items-center justify-end gap-3">
         {isTestMode && (
           <div
@@ -215,9 +221,7 @@ export default function TopBar({
           >
             {isExpired ? <Lock size={15} /> : <Clock size={15} />}
             <span>
-              {isExpired
-                ? "ENDED"
-                : formatRemainingTime(remainingMs ?? 0)}
+              {isExpired ? "ENDED" : formatRemainingTime(remainingMs ?? 0)}
             </span>
           </div>
         )}
@@ -251,7 +255,7 @@ export default function TopBar({
               isDark ? "text-slate-300" : "text-slate-700"
             }`}
           >
-            {mode === "test" ? participantLabel : "Practice"}
+            {isTestMode ? participantLabel : "Practice"}
           </span>
         </div>
       </div>

@@ -2,25 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
-  BarChart3,
-  CheckCircle2,
-  Circle,
-  ClipboardList,
   Code2,
   Download,
   Eye,
-  GraduationCap,
-  Mail,
   Moon,
   RefreshCcw,
   Search,
-  ShieldAlert,
   Sun,
-  Timer,
-  UserRound,
-  Users,
   X,
-  AlertTriangle,
 } from "lucide-react";
 import { apiGet } from "../api";
 
@@ -31,61 +20,56 @@ const formatDateTime = (value) => {
   return new Date(value).toLocaleString();
 };
 
-const normalize = (value) => String(value || "").toLowerCase();
+const formatTime = (value) => {
+  if (!value) return "—";
 
-const statusBadgeClass = (status, isDark) => {
-  const value = String(status || "").toUpperCase();
-
-  if (value === "COMPLETED" || value === "SUBMITTED") {
-    return isDark
-      ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
-      : "border-emerald-200 bg-emerald-50 text-emerald-700";
+  try {
+    return new Date(value).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "—";
   }
-
-  if (value === "IN_PROGRESS") {
-    return isDark
-      ? "border-blue-400/30 bg-blue-400/10 text-blue-300"
-      : "border-blue-200 bg-blue-50 text-blue-700";
-  }
-
-  if (value === "DISQUALIFIED") {
-    return isDark
-      ? "border-rose-400/30 bg-rose-400/10 text-rose-300"
-      : "border-rose-200 bg-rose-50 text-rose-700";
-  }
-
-  return isDark
-    ? "border-slate-400/20 bg-slate-400/10 text-slate-300"
-    : "border-slate-200 bg-slate-50 text-slate-700";
 };
 
-const problemStatusMeta = (status, isDark) => {
+const getProblemTime = (problem) => {
+  return (
+    problem.acceptedAt ||
+    problem.latestSubmittedAt ||
+    problem.latestSubmissionAt ||
+    problem.submittedAt ||
+    null
+  );
+};
+
+const getCellMeta = (problem, isDark) => {
+  const status = String(problem?.problemStatus || "").toUpperCase();
+  const time = formatTime(getProblemTime(problem));
+
   if (status === "ACCEPTED") {
     return {
-      label: "Solved",
-      icon: <CheckCircle2 size={14} />,
+      text: `✓ ${time}`,
       cls: isDark
-        ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
-        : "border-emerald-200 bg-emerald-50 text-emerald-700",
+        ? "text-emerald-300 bg-emerald-400/10 border-emerald-400/20"
+        : "text-emerald-700 bg-emerald-50 border-emerald-200",
     };
   }
 
   if (status === "ATTEMPTED") {
     return {
-      label: "Attempted",
-      icon: <AlertTriangle size={14} />,
+      text: `WA ${time}`,
       cls: isDark
-        ? "border-amber-400/30 bg-amber-400/10 text-amber-300"
-        : "border-amber-200 bg-amber-50 text-amber-700",
+        ? "text-amber-300 bg-amber-400/10 border-amber-400/20"
+        : "text-amber-700 bg-amber-50 border-amber-200",
     };
   }
 
   return {
-    label: "Not Started",
-    icon: <Circle size={14} />,
+    text: "—",
     cls: isDark
-      ? "border-white/10 bg-white/[0.04] text-slate-400"
-      : "border-slate-200 bg-slate-50 text-slate-500",
+      ? "text-slate-500 bg-white/[0.02] border-white/10"
+      : "text-slate-400 bg-slate-50 border-slate-200",
   };
 };
 
@@ -103,7 +87,6 @@ export default function FacultyResultsPage() {
   const [error, setError] = useState("");
 
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ALL");
 
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [submissionLoading, setSubmissionLoading] = useState(false);
@@ -141,29 +124,53 @@ export default function FacultyResultsPage() {
     loadResults();
   }, [testId]);
 
+  const problemColumns = useMemo(() => {
+    const map = new Map();
+
+    (data?.participants || []).forEach((participant) => {
+      (participant.problems || []).forEach((problem, index) => {
+        if (!map.has(problem.problemId)) {
+          map.set(problem.problemId, {
+            problemId: problem.problemId,
+            title: problem.problemTitle || `Q${index + 1}`,
+          });
+        }
+      });
+    });
+
+    return Array.from(map.values());
+  }, [data]);
+
   const filteredParticipants = useMemo(() => {
     const participants = data?.participants || [];
 
-    return participants.filter((p) => {
-      const text = [
-        p.name,
-        p.rollNumber,
-        p.email,
-        p.identifier,
-        p.status,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
+    return participants
+      .filter((p) => {
+        const text = [
+          p.name,
+          p.rollNumber,
+          p.email,
+          p.identifier,
+          p.status,
+          p.latestSubmissionStatus,
+          p.latestSubmissionProblemTitle,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
 
-      const matchesQuery = text.includes(query.trim().toLowerCase());
-      const matchesStatus =
-        statusFilter === "ALL" ||
-        String(p.status || "").toUpperCase() === statusFilter;
+        return text.includes(query.trim().toLowerCase());
+      })
+      .sort((a, b) => {
+        const solvedDiff = (b.solvedCount ?? 0) - (a.solvedCount ?? 0);
+        if (solvedDiff !== 0) return solvedDiff;
 
-      return matchesQuery && matchesStatus;
-    });
-  }, [data, query, statusFilter]);
+        const scoreDiff = (b.totalScore ?? 0) - (a.totalScore ?? 0);
+        if (scoreDiff !== 0) return scoreDiff;
+
+        return String(a.name || "").localeCompare(String(b.name || ""));
+      });
+  }, [data, query]);
 
   const pageClass = isDark
     ? "bg-[#070B12] text-white"
@@ -209,47 +216,36 @@ export default function FacultyResultsPage() {
 
     const rows = [];
 
-    const problemTitles =
-      data.participants?.[0]?.problems?.map((p) => p.problemTitle) || [];
-
     rows.push([
-      "Participant ID",
+      "Rank",
       "Name",
-      "Roll Number",
-      "Email",
-      "Identifier",
-      "Type",
-      "Status",
+      "Roll/Email",
       "Solved",
-      "Attempted",
-      "Total Problems",
-      "Score",
-      "Max Score",
-      "Latest Submission Status",
-      "Latest Submission Problem",
-      ...problemTitles,
+      ...problemColumns.map((_, index) => `Q${index + 1}`),
+      "Total Score",
     ]);
 
-    (data.participants || []).forEach((p) => {
+    filteredParticipants.forEach((p, index) => {
       rows.push([
-        p.participantId,
+        index + 1,
         p.name || "",
-        p.rollNumber || "",
-        p.email || "",
-        p.identifier || "",
-        p.participantType || "",
-        p.status || "",
-        p.solvedCount ?? 0,
-        p.attemptedCount ?? 0,
-        p.totalProblems ?? 0,
-        p.totalScore ?? 0,
-        p.maxScore ?? 0,
-        p.latestSubmissionStatus || "",
-        p.latestSubmissionProblemTitle || "",
-        ...(p.problems || []).map(
-          (problem) =>
-            `${problem.problemStatus || "NOT_STARTED"} (${problem.bestScore ?? 0})`,
-        ),
+        p.rollNumber || p.email || p.identifier || "",
+        `${p.solvedCount ?? 0}/${p.totalProblems ?? problemColumns.length}`,
+        ...problemColumns.map((col) => {
+          const problem = (p.problems || []).find(
+            (item) => item.problemId === col.problemId,
+          );
+
+          if (!problem) return "—";
+
+          const status = String(problem.problemStatus || "").toUpperCase();
+          const time = formatTime(getProblemTime(problem));
+
+          if (status === "ACCEPTED") return `Solved ${time}`;
+          if (status === "ATTEMPTED") return `Attempted ${time}`;
+          return "—";
+        }),
+        `${p.totalScore ?? 0}/${p.maxScore ?? problemColumns.length * 100}`,
       ]);
     });
 
@@ -284,7 +280,6 @@ export default function FacultyResultsPage() {
           <button
             onClick={() => navigate("/faculty")}
             className={`h-10 w-10 rounded-xl border flex items-center justify-center transition ${softButton}`}
-            title="Back"
           >
             <ArrowLeft size={17} />
           </button>
@@ -304,9 +299,9 @@ export default function FacultyResultsPage() {
           />
 
           <div className="hidden md:block">
-            <div className="font-bold">Faculty Results</div>
+            <div className="font-bold">Results</div>
             <div className={`text-xs ${muted}`}>
-              Participant-wise contest performance
+              Name · solved · Q-wise time · total score
             </div>
           </div>
         </div>
@@ -329,7 +324,7 @@ export default function FacultyResultsPage() {
             className={`h-10 px-4 rounded-xl border flex items-center gap-2 text-sm font-semibold transition ${softButton}`}
           >
             <Download size={15} />
-            Export CSV
+            Export
           </button>
 
           <button
@@ -342,88 +337,50 @@ export default function FacultyResultsPage() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-6 py-10">
+      <main className="max-w-7xl mx-auto px-6 py-8">
         {loading ? (
-          <div className={`rounded-3xl border p-12 text-center ${cardClass}`}>
-            Loading result dashboard...
+          <div className={`rounded-2xl border p-10 text-center ${cardClass}`}>
+            Loading results...
           </div>
         ) : error ? (
-          <div className="rounded-3xl border border-rose-400/20 bg-rose-400/10 p-8 text-rose-500">
+          <div className="rounded-2xl border border-rose-400/20 bg-rose-400/10 p-6 text-rose-500">
             {error}
           </div>
         ) : (
           <>
-            <section className={`rounded-3xl border p-8 mb-7 ${cardClass}`}>
-              <div
-                className="text-xs uppercase tracking-[0.25em] text-[#58A6FF] mb-4"
-                style={{ fontFamily: MONO }}
-              >
-                Test Result Dashboard
-              </div>
-
+            <section className={`rounded-2xl border p-6 mb-6 ${cardClass}`}>
               <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
                 <div>
-                  <h1 className="text-4xl font-black">{data?.title}</h1>
+                  <div
+                    className="text-xs uppercase tracking-[0.22em] text-[#58A6FF] mb-3"
+                    style={{ fontFamily: MONO }}
+                  >
+                    Test Results
+                  </div>
 
-                  <p className={`mt-3 ${muted}`}>
-                    Test Code:{" "}
+                  <h1 className="text-3xl font-black">{data?.title}</h1>
+
+                  <p className={`mt-2 text-sm ${muted}`}>
+                    Code:{" "}
                     <span className="font-mono text-[#58A6FF]">
                       {data?.testCode}
                     </span>{" "}
-                    · Start: {formatDateTime(data?.startTime)} · End:{" "}
-                    {formatDateTime(data?.endTime)}
+                    · Participants: {data?.totalParticipants ?? 0} · Problems:{" "}
+                    {problemColumns.length} · Submissions:{" "}
+                    {data?.totalSubmissions ?? 0}
                   </p>
                 </div>
 
                 <button
                   onClick={() => navigate(`/faculty/tests/${testId}/manage`)}
-                  className="h-11 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition"
+                  className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition"
                 >
                   Manage Test
                 </button>
               </div>
             </section>
 
-            <section className="grid md:grid-cols-2 xl:grid-cols-6 gap-4 mb-7">
-              <SummaryCard
-                icon={<Users size={20} />}
-                label="Participants"
-                value={data?.totalParticipants ?? 0}
-                isDark={isDark}
-              />
-              <SummaryCard
-                icon={<Code2 size={20} />}
-                label="Problems"
-                value={data?.totalProblems ?? 0}
-                isDark={isDark}
-              />
-              <SummaryCard
-                icon={<ClipboardList size={20} />}
-                label="Submissions"
-                value={data?.totalSubmissions ?? 0}
-                isDark={isDark}
-              />
-              <SummaryCard
-                icon={<Timer size={20} />}
-                label="In Progress"
-                value={data?.inProgressCount ?? 0}
-                isDark={isDark}
-              />
-              <SummaryCard
-                icon={<CheckCircle2 size={20} />}
-                label="Completed"
-                value={data?.completedCount ?? 0}
-                isDark={isDark}
-              />
-              <SummaryCard
-                icon={<ShieldAlert size={20} />}
-                label="Disqualified"
-                value={data?.disqualifiedCount ?? 0}
-                isDark={isDark}
-              />
-            </section>
-
-            <section className={`rounded-3xl border overflow-hidden ${cardClass}`}>
+            <section className={`rounded-2xl border overflow-hidden ${cardClass}`}>
               <div
                 className={`p-5 border-b ${
                   isDark ? "border-white/10" : "border-slate-200"
@@ -431,38 +388,24 @@ export default function FacultyResultsPage() {
               >
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                   <div>
-                    <h2 className="text-2xl font-black">Participants</h2>
+                    <h2 className="text-xl font-black">Leaderboard</h2>
                     <p className={`text-sm mt-1 ${muted}`}>
                       Showing {filteredParticipants.length} of{" "}
                       {data?.participants?.length || 0} participants.
                     </p>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <div className="relative">
-                      <Search
-                        size={16}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
-                      />
-                      <input
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Search name, roll, email..."
-                        className={`h-10 w-full sm:w-[280px] rounded-xl border pl-10 pr-3 text-sm outline-none ${inputClass}`}
-                      />
-                    </div>
-
-                    <select
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                      className={`h-10 rounded-xl border px-3 text-sm outline-none ${inputClass}`}
-                    >
-                      <option value="ALL">All Status</option>
-                      <option value="REGISTERED">Registered</option>
-                      <option value="IN_PROGRESS">In Progress</option>
-                      <option value="COMPLETED">Completed</option>
-                      <option value="DISQUALIFIED">Disqualified</option>
-                    </select>
+                  <div className="relative">
+                    <Search
+                      size={16}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                    />
+                    <input
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Search name, roll, email..."
+                      className={`h-10 w-full sm:w-[300px] rounded-xl border pl-10 pr-3 text-sm outline-none ${inputClass}`}
+                    />
                   </div>
                 </div>
               </div>
@@ -472,18 +415,55 @@ export default function FacultyResultsPage() {
                   No participants found.
                 </div>
               ) : (
-                <div className="divide-y divide-white/5">
-                  {filteredParticipants.map((participant, index) => (
-                    <ParticipantResultCard
-                      key={participant.participantId}
-                      participant={participant}
-                      index={index}
-                      isDark={isDark}
-                      muted={muted}
-                      softButton={softButton}
-                      onViewSubmission={openSubmission}
-                    />
-                  ))}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead
+                      className={`border-b ${
+                        isDark
+                          ? "border-white/10 bg-white/[0.02]"
+                          : "border-slate-200 bg-slate-50"
+                      }`}
+                    >
+                      <tr className="text-left text-slate-500">
+                        <th className="px-4 py-4 font-semibold">Rank</th>
+                        <th className="px-4 py-4 font-semibold min-w-[220px]">
+                          Name
+                        </th>
+                        <th className="px-4 py-4 font-semibold">Solved</th>
+
+                        {problemColumns.map((problem, index) => (
+                          <th
+                            key={problem.problemId}
+                            className="px-4 py-4 font-semibold min-w-[110px]"
+                            title={problem.title}
+                          >
+                            Q{index + 1}
+                            <div className="text-[11px] font-normal truncate max-w-[100px]">
+                              {problem.title}
+                            </div>
+                          </th>
+                        ))}
+
+                        <th className="px-4 py-4 font-semibold text-right min-w-[130px]">
+                          Total Score
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {filteredParticipants.map((participant, index) => (
+                        <ParticipantRow
+                          key={participant.participantId}
+                          participant={participant}
+                          index={index}
+                          problemColumns={problemColumns}
+                          isDark={isDark}
+                          muted={muted}
+                          onViewSubmission={openSubmission}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </section>
@@ -508,206 +488,80 @@ export default function FacultyResultsPage() {
   );
 }
 
-function SummaryCard({ icon, label, value, isDark }) {
-  const cardClass = isDark
-    ? "bg-[#111827] border-white/10"
-    : "bg-white border-slate-200 shadow-sm";
-
-  return (
-    <div className={`rounded-3xl border p-5 ${cardClass}`}>
-      <div className="text-[#58A6FF] mb-3">{icon}</div>
-      <div className="text-3xl font-black">{value}</div>
-      <div className="text-sm mt-1 text-slate-500">{label}</div>
-    </div>
-  );
-}
-
-function ParticipantResultCard({
+function ParticipantRow({
   participant,
   index,
+  problemColumns,
   isDark,
   muted,
-  softButton,
   onViewSubmission,
 }) {
-  const cardHover = isDark ? "hover:bg-white/[0.03]" : "hover:bg-slate-50";
+  const rowClass = isDark
+    ? "border-white/5 hover:bg-white/[0.03]"
+    : "border-slate-100 hover:bg-slate-50";
+
+  const name =
+    participant.name ||
+    participant.rollNumber ||
+    participant.identifier ||
+    "Participant";
+
+  const identity =
+    participant.rollNumber || participant.email || participant.identifier || "—";
 
   return (
-    <div className={`p-6 transition ${cardHover}`}>
-      <div className="grid xl:grid-cols-[60px_1.1fr_220px_220px] gap-5 items-start">
-        <div
-          className="font-mono text-slate-500 pt-1"
-          style={{ fontFamily: MONO }}
-        >
-          {String(index + 1).padStart(2, "0")}
-        </div>
+    <tr className={`border-b transition ${rowClass}`}>
+      <td className="px-4 py-4 font-mono text-slate-500">
+        {String(index + 1).padStart(2, "0")}
+      </td>
 
-        <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h3 className="font-bold text-lg">
-              {participant.name ||
-                participant.rollNumber ||
-                participant.identifier ||
-                "Participant"}
-            </h3>
+      <td className="px-4 py-4">
+        <div className="font-bold">{name}</div>
+        <div className={`text-xs mt-1 ${muted}`}>{identity}</div>
+      </td>
 
-            <span
-              className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${statusBadgeClass(
-                participant.status,
-                isDark,
-              )}`}
-            >
-              {participant.status || "REGISTERED"}
-            </span>
-          </div>
+      <td className="px-4 py-4">
+        <span className="font-bold text-emerald-400">
+          {participant.solvedCount ?? 0}/{problemColumns.length}
+        </span>
+      </td>
 
-          <div className={`mt-2 flex flex-wrap gap-4 text-sm ${muted}`}>
-            {participant.rollNumber && (
-              <span className="inline-flex items-center gap-1">
-                <GraduationCap size={14} />
-                {participant.rollNumber}
+      {problemColumns.map((column) => {
+        const problem = (participant.problems || []).find(
+          (item) => item.problemId === column.problemId,
+        );
+
+        const meta = getCellMeta(problem, isDark);
+
+        return (
+          <td key={column.problemId} className="px-4 py-4">
+            {problem?.latestSubmissionId ? (
+              <button
+                onClick={() => onViewSubmission(problem.latestSubmissionId)}
+                className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-bold ${meta.cls}`}
+                title="View code"
+              >
+                {meta.text}
+                <Eye size={13} />
+              </button>
+            ) : (
+              <span
+                className={`inline-flex rounded-lg border px-3 py-1.5 text-xs font-bold ${meta.cls}`}
+              >
+                {meta.text}
               </span>
             )}
+          </td>
+        );
+      })}
 
-            {participant.email && (
-              <span className="inline-flex items-center gap-1">
-                <Mail size={14} />
-                {participant.email}
-              </span>
-            )}
-
-            {participant.identifier && (
-              <span className="inline-flex items-center gap-1">
-                <UserRound size={14} />
-                {participant.identifier}
-              </span>
-            )}
-          </div>
-
-          <div className={`mt-2 text-sm ${muted}`}>
-            Started: {formatDateTime(participant.startedAt)} · Submitted:{" "}
-            {formatDateTime(participant.submittedAt)}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <SmallMetric
-            label="Solved"
-            value={`${participant.solvedCount ?? 0}/${participant.totalProblems ?? 0}`}
-            tone="green"
-            isDark={isDark}
-          />
-          <SmallMetric
-            label="Attempted"
-            value={participant.attemptedCount ?? 0}
-            tone="yellow"
-            isDark={isDark}
-          />
-          <SmallMetric
-            label="Score"
-            value={`${participant.totalScore ?? 0}/${participant.maxScore ?? 0}`}
-            tone="blue"
-            isDark={isDark}
-          />
-          <SmallMetric
-            label="Latest"
-            value={participant.latestSubmissionStatus || "—"}
-            tone="slate"
-            isDark={isDark}
-          />
-        </div>
-
-        <div>
-          {participant.latestSubmissionId ? (
-            <button
-              onClick={() => onViewSubmission(participant.latestSubmissionId)}
-              className={`h-10 px-4 rounded-xl border text-sm font-semibold transition flex items-center gap-2 ${softButton}`}
-            >
-              <Eye size={15} />
-              View Latest Code
-            </button>
-          ) : (
-            <div className={`text-sm ${muted}`}>No submissions yet</div>
-          )}
-
-          {participant.latestSubmissionProblemTitle && (
-            <div className={`text-xs mt-2 ${muted}`}>
-              Latest problem: {participant.latestSubmissionProblemTitle}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="mt-5 grid md:grid-cols-2 xl:grid-cols-3 gap-3">
-        {(participant.problems || []).map((problem) => {
-          const meta = problemStatusMeta(problem.problemStatus, isDark);
-
-          return (
-            <div
-              key={problem.problemId}
-              className={`rounded-2xl border p-4 ${
-                isDark
-                  ? "border-white/10 bg-white/[0.03]"
-                  : "border-slate-200 bg-white"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="font-semibold truncate">
-                    {problem.problemTitle}
-                  </div>
-                  <div className={`text-xs mt-1 ${muted}`}>
-                    Score: {problem.bestScore ?? 0} · Attempts:{" "}
-                    {problem.attempts ?? 0}
-                  </div>
-                </div>
-
-                <span
-                  className={`shrink-0 inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-bold ${meta.cls}`}
-                >
-                  {meta.icon}
-                  {meta.label}
-                </span>
-              </div>
-
-              {problem.latestSubmissionId && (
-                <button
-                  onClick={() => onViewSubmission(problem.latestSubmissionId)}
-                  className={`mt-3 h-9 px-3 rounded-xl border text-xs font-semibold transition flex items-center gap-2 ${softButton}`}
-                >
-                  <Eye size={14} />
-                  View Code
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function SmallMetric({ label, value, tone, isDark }) {
-  const toneClass = {
-    green: isDark
-      ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
-      : "border-emerald-200 bg-emerald-50 text-emerald-700",
-    yellow: isDark
-      ? "border-amber-400/20 bg-amber-400/10 text-amber-300"
-      : "border-amber-200 bg-amber-50 text-amber-700",
-    blue: isDark
-      ? "border-blue-400/20 bg-blue-400/10 text-blue-300"
-      : "border-blue-200 bg-blue-50 text-blue-700",
-    slate: isDark
-      ? "border-white/10 bg-white/[0.04] text-slate-300"
-      : "border-slate-200 bg-slate-50 text-slate-700",
-  }[tone];
-
-  return (
-    <div className={`rounded-2xl border p-3 ${toneClass}`}>
-      <div className="text-xs opacity-80">{label}</div>
-      <div className="font-black mt-1 truncate">{value}</div>
-    </div>
+      <td className="px-4 py-4 text-right">
+        <span className="font-black text-blue-400">
+          {participant.totalScore ?? 0}/
+          {participant.maxScore ?? problemColumns.length * 100}
+        </span>
+      </td>
+    </tr>
   );
 }
 
@@ -725,7 +579,7 @@ function SubmissionModal({ submission, loading, error, isDark, onClose }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-5">
       <div
-        className={`w-full max-w-5xl max-h-[88vh] rounded-3xl border overflow-hidden ${modalClass}`}
+        className={`w-full max-w-5xl max-h-[88vh] rounded-2xl border overflow-hidden ${modalClass}`}
       >
         <div
           className={`h-16 px-5 border-b flex items-center justify-between ${
@@ -742,7 +596,9 @@ function SubmissionModal({ submission, loading, error, isDark, onClose }) {
           <button
             onClick={onClose}
             className={`h-10 w-10 rounded-xl border flex items-center justify-center ${
-              isDark ? "border-white/10 hover:bg-white/10" : "border-slate-200 hover:bg-slate-100"
+              isDark
+                ? "border-white/10 hover:bg-white/10"
+                : "border-slate-200 hover:bg-slate-100"
             }`}
           >
             <X size={18} />
@@ -761,17 +617,56 @@ function SubmissionModal({ submission, loading, error, isDark, onClose }) {
           ) : submission ? (
             <div className="space-y-5">
               <div className="grid md:grid-cols-4 gap-3">
-                <InfoBox label="Participant" value={submission.participantName || submission.rollNumber || submission.identifier || "—"} isDark={isDark} />
-                <InfoBox label="Problem" value={submission.problemTitle || "—"} isDark={isDark} />
-                <InfoBox label="Status" value={submission.status || "—"} isDark={isDark} />
-                <InfoBox label="Score" value={`${submission.score ?? 0} / 100`} isDark={isDark} />
+                <InfoBox
+                  label="Participant"
+                  value={
+                    submission.participantName ||
+                    submission.rollNumber ||
+                    submission.identifier ||
+                    "—"
+                  }
+                  isDark={isDark}
+                />
+                <InfoBox
+                  label="Problem"
+                  value={submission.problemTitle || "—"}
+                  isDark={isDark}
+                />
+                <InfoBox
+                  label="Status"
+                  value={submission.status || "—"}
+                  isDark={isDark}
+                />
+                <InfoBox
+                  label="Score"
+                  value={`${submission.score ?? 0} / 100`}
+                  isDark={isDark}
+                />
               </div>
 
               <div className="grid md:grid-cols-4 gap-3">
-                <InfoBox label="Language" value={submission.language || "—"} isDark={isDark} />
-                <InfoBox label="Passed" value={`${submission.passedTestCases ?? 0}/${submission.totalTestCases ?? 0}`} isDark={isDark} />
-                <InfoBox label="Failed Case" value={submission.failedTestCase || "—"} isDark={isDark} />
-                <InfoBox label="Submitted At" value={formatDateTime(submission.submittedAt)} isDark={isDark} />
+                <InfoBox
+                  label="Language"
+                  value={submission.language || "—"}
+                  isDark={isDark}
+                />
+                <InfoBox
+                  label="Passed"
+                  value={`${submission.passedTestCases ?? 0}/${
+                    submission.totalTestCases ?? 0
+                  }`}
+                  isDark={isDark}
+                />
+                <InfoBox
+                  label="Failed Case"
+                  value={submission.failedTestCase || "—"}
+                  isDark={isDark}
+                />
+                <InfoBox
+                  label="Submitted At"
+                  value={formatDateTime(submission.submittedAt)}
+                  isDark={isDark}
+                />
               </div>
 
               <div>
@@ -779,6 +674,7 @@ function SubmissionModal({ submission, loading, error, isDark, onClose }) {
                   <Code2 size={17} />
                   Submitted Code
                 </div>
+
                 <pre
                   className={`rounded-2xl border p-4 overflow-x-auto text-sm leading-6 ${codeClass}`}
                   style={{ fontFamily: MONO }}
