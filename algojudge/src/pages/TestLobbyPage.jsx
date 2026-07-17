@@ -26,8 +26,23 @@ export default function TestLobbyPage() {
     return localStorage.getItem("cf_theme") || "dark";
   });
 
-  const [test, setTest] = useState(null);
-  const [participant, setParticipant] = useState(null);
+  const [test] = useState(() => {
+    try {
+      const stored = JSON.parse(
+        localStorage.getItem("cf_test_access") || "null",
+      );
+      return String(stored?.testId) === String(testId) ? stored : null;
+    } catch {
+      return null;
+    }
+  });
+  const [participant] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("cf_participant") || "null");
+    } catch {
+      return null;
+    }
+  });
   const [problems, setProblems] = useState([]);
   const [error, setError] = useState("");
 
@@ -44,39 +59,20 @@ export default function TestLobbyPage() {
   }, [theme]);
 
   useEffect(() => {
-    const testRaw = localStorage.getItem("cf_test_access");
-    const participantRaw = localStorage.getItem("cf_participant");
-
-    if (!testRaw) {
+    if (!test) {
       navigate("/test-access");
       return;
     }
 
-    if (!participantRaw) {
+    if (!participant) {
       navigate(`/test/${testId}/identity`);
-      return;
-    }
-
-    try {
-      const parsedTest = JSON.parse(testRaw);
-      const parsedParticipant = JSON.parse(participantRaw);
-
-      if (String(parsedTest.testId) !== String(testId)) {
-        navigate("/test-access");
-        return;
-      }
-
-      setTest(parsedTest);
-      setParticipant(parsedParticipant);
-    } catch {
-      navigate("/test-access");
       return;
     }
 
     apiGet(`/tests/${testId}/problems`)
       .then((data) => setProblems(Array.isArray(data) ? data : []))
       .catch(() => setError("Failed to load test problems."));
-  }, [testId, navigate]);
+  }, [testId, navigate, participant, test]);
 
   if (!test || !participant) {
     return (

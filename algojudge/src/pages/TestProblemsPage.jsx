@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import ContestFullscreenGuard from "../components/ContestFullscreenGuard";
 import { apiGet, apiPost } from "../api";
@@ -167,7 +167,7 @@ export default function TestProblemsPage() {
       .catch(() => setError("Failed to load test problems."));
   }, [testId, navigate]);
 
-  const loadProblemStatus = async () => {
+  const loadProblemStatus = useCallback(async () => {
     if (!testId || !participant?.participantId) return;
 
     setStatusLoading(true);
@@ -184,7 +184,7 @@ export default function TestProblemsPage() {
     } finally {
       setStatusLoading(false);
     }
-  };
+  }, [participant?.participantId, testId]);
 
   useEffect(() => {
     loadProblemStatus();
@@ -198,7 +198,7 @@ export default function TestProblemsPage() {
     return () => {
       window.removeEventListener("focus", onFocus);
     };
-  }, [testId, participant?.participantId]);
+  }, [loadProblemStatus]);
 
   useEffect(() => {
     if (!test?.endTime) return;
@@ -216,7 +216,7 @@ export default function TestProblemsPage() {
     return () => clearInterval(interval);
   }, [test]);
 
-  const finishContest = async ({ auto = false } = {}) => {
+  const finishContest = useCallback(async ({ auto = false } = {}) => {
     if (!participant?.participantId || !testId) return;
 
     if (!auto) {
@@ -237,7 +237,9 @@ export default function TestProblemsPage() {
       const updatedParticipant = await apiPost(
         `/tests/${testId}/participants/${participant.participantId}/complete`,
         {
-          reason: auto ? "Timer ended. Auto completed." : "Participant finished manually.",
+          reason: auto
+            ? "Timer ended. Auto completed."
+            : "Participant finished manually.",
         },
       );
 
@@ -255,7 +257,11 @@ export default function TestProblemsPage() {
         }
       }
 
-      alert(auto ? "Time is over. Your test has been auto-submitted." : "Your test has been submitted successfully.");
+      alert(
+        auto
+          ? "Time is over. Your test has been auto-submitted."
+          : "Your test has been submitted successfully.",
+      );
 
       navigate("/test-access", { replace: true });
     } catch (err) {
@@ -264,7 +270,7 @@ export default function TestProblemsPage() {
     } finally {
       setFinishing(false);
     }
-  };
+  }, [finishing, navigate, participant?.participantId, testId]);
 
   useEffect(() => {
     if (!participant?.participantId) return;
@@ -272,7 +278,7 @@ export default function TestProblemsPage() {
     if (remainingMs > 0) return;
 
     finishContest({ auto: true });
-  }, [remainingMs, participant?.participantId]);
+  }, [finishContest, remainingMs, participant?.participantId]);
 
   const statusCounts = useMemo(() => {
     let solved = 0;

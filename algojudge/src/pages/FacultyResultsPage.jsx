@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -104,7 +104,7 @@ export default function FacultyResultsPage() {
     }
   }, [theme]);
 
-  const loadResults = async ({ silent = false } = {}) => {
+  const loadResults = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
     setRefreshing(true);
     setError("");
@@ -118,11 +118,11 @@ export default function FacultyResultsPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [testId]);
 
   useEffect(() => {
     loadResults();
-  }, [testId]);
+  }, [loadResults]);
 
   const problemColumns = useMemo(() => {
     const map = new Map();

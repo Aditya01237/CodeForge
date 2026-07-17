@@ -30,23 +30,11 @@ export default function EditorPanel({
 
   const [openMenu, setOpenMenu] = useState(null);
 
-  const [codeMap, setCodeMap] = useState(() => ({
-    "C++": STARTERS["C++"] || "",
-    Python: STARTERS["Python"] || "",
-    Java: STARTERS["Java"] || "",
-  }));
-
   const isDark = theme === "dark";
 
   useEffect(() => {
     localStorage.setItem("cf_editor_font_size", String(fontSize));
   }, [fontSize]);
-
-  useEffect(() => {
-    if (!code) {
-      setCode(STARTERS[lang] || "");
-    }
-  }, []);
 
   const increaseFont = (e) => {
     e.stopPropagation();
@@ -64,20 +52,7 @@ export default function EditorPanel({
   };
 
   const switchLang = (nextLang) => {
-    const currentCode = code || "";
-
-    setCodeMap((prev) => ({
-      ...prev,
-      [lang]: currentCode,
-    }));
-
-    const nextCode =
-      codeMap[nextLang] !== undefined
-        ? codeMap[nextLang]
-        : STARTERS[nextLang] || "";
-
     onLangChange?.(nextLang);
-    setCode(nextCode);
     setOpenMenu(null);
   };
 
@@ -85,11 +60,6 @@ export default function EditorPanel({
     e.stopPropagation();
 
     const starter = STARTERS[lang] || "";
-
-    setCodeMap((prev) => ({
-      ...prev,
-      [lang]: starter,
-    }));
 
     setCode(starter);
   };
@@ -167,10 +137,6 @@ export default function EditorPanel({
   const buttonClass = isDark
     ? "border-white/10 bg-white/[0.04] text-slate-300 hover:text-white hover:border-[#58A6FF]/50 hover:bg-white/[0.08]"
     : "border-slate-200 bg-slate-50 text-slate-700 hover:text-slate-950 hover:border-blue-400 hover:bg-slate-100";
-
-  const iconButtonClass = isDark
-    ? "border-white/10 bg-white/[0.04] text-slate-400 hover:text-white hover:border-[#58A6FF]/50 hover:bg-white/[0.08]"
-    : "border-slate-200 bg-slate-50 text-slate-600 hover:text-slate-950 hover:border-blue-400 hover:bg-slate-100";
 
   const menuClass = isDark
     ? "bg-[#111827] border-white/10 shadow-black/40"
@@ -325,13 +291,7 @@ export default function EditorPanel({
           value={code}
           onChange={(value) => {
             const updated = value || "";
-
             setCode(updated);
-
-            setCodeMap((prev) => ({
-              ...prev,
-              [lang]: updated,
-            }));
           }}
           options={{
             fontSize,

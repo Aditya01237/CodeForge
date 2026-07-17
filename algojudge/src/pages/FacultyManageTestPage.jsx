@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -105,7 +105,7 @@ export default function FacultyManageTestPage() {
     return problems.filter((problem) => !attachedProblemIds.has(problem.id));
   }, [problems, attachedProblemIds]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError("");
     setSuccess("");
@@ -125,11 +125,11 @@ export default function FacultyManageTestPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [testId]);
 
   useEffect(() => {
     loadData();
-  }, [testId]);
+  }, [loadData]);
 
   const updateField = (key, value) => {
     setForm((prev) => ({

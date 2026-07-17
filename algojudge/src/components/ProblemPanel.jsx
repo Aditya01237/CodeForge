@@ -127,7 +127,6 @@ const ExampleCard = ({ example, index, theme }) => (
 const RichBlocks = ({ blocks, theme }) => {
   const text = theme === "dark" ? "text-white" : "text-slate-950";
   const muted = theme === "dark" ? "text-slate-400" : "text-slate-600";
-
   if (!blocks.length) return null;
 
   return (
@@ -353,8 +352,6 @@ export default function ProblemPanel({
   const headerBg = theme === "dark" ? "bg-[#1B1B1B]" : "bg-slate-50";
   const border = theme === "dark" ? "border-white/10" : "border-slate-200";
   const text = theme === "dark" ? "text-white" : "text-slate-950";
-  const muted = theme === "dark" ? "text-slate-400" : "text-slate-600";
-
   return (
     <div
       className={`h-full flex flex-col border-r ${panelBg} ${border}`}

@@ -2,3 +2,5 @@ logs/
 # local runtime logs
 logs/
 *.log
+tmp/
+.pids/
