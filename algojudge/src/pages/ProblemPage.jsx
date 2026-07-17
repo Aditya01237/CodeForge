@@ -8,6 +8,7 @@ import EditorPanel from "../components/EditorPanel";
 import BottomPanel from "../components/BottomPanel";
 import ContestFullscreenGuard from "../components/ContestFullscreenGuard";
 import { STARTERS } from "../data/codeTemplates";
+import { getCodeStorageKey } from "../utils/editorStorage";
 
 export default function ProblemPage() {
   const { id } = useParams();
@@ -56,13 +57,6 @@ export default function ProblemPage() {
     if (selectedLang === "Python") return "python";
     if (selectedLang === "Java") return "java";
     return "cpp";
-  };
-
-  const getCodeStorageKey = (problemId = id, selectedLang = lang) => {
-    const scope = mode === "test" && testId ? `test-${testId}` : "practice";
-    const language = encodeURIComponent(selectedLang);
-
-    return `cf_code_${scope}_problem-${problemId}_${language}`;
   };
 
   const getCurrentParticipantId = () => {
@@ -133,7 +127,12 @@ export default function ProblemPage() {
   }, [problem]);
 
   useEffect(() => {
-    const storageKey = getCodeStorageKey(id, lang);
+    const storageKey = getCodeStorageKey({
+      problemId: id,
+      language: lang,
+      mode,
+      testId,
+    });
     const savedCode = localStorage.getItem(storageKey);
 
     loadingSavedCode.current = true;
@@ -146,7 +145,10 @@ export default function ProblemPage() {
       return;
     }
 
-    localStorage.setItem(getCodeStorageKey(id, lang), code);
+    localStorage.setItem(
+      getCodeStorageKey({ problemId: id, language: lang, mode, testId }),
+      code,
+    );
   }, [code, id, lang, mode, testId]);
 
   const handleRun = async () => {

@@ -27,6 +27,7 @@ export default function FacultyDashboard() {
   const [tests, setTests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [statusReferenceTime] = useState(() => Date.now());
 
   const isDark = theme === "dark";
 
@@ -79,13 +80,11 @@ export default function FacultyDashboard() {
   };
 
   const getTestStatus = (test) => {
-    const now = Date.now();
-
     const start = test.startTime ? new Date(test.startTime).getTime() : null;
     const end = test.endTime ? new Date(test.endTime).getTime() : null;
 
-    if (start && now < start) return "UPCOMING";
-    if (end && now > end) return "ENDED";
+    if (start && statusReferenceTime < start) return "UPCOMING";
+    if (end && statusReferenceTime > end) return "ENDED";
     return "LIVE";
   };
 

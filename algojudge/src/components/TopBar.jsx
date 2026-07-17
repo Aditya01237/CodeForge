@@ -70,10 +70,7 @@ export default function TopBar({
   }, []);
 
   useEffect(() => {
-    if (!isTestMode || !testAccess?.endTime) {
-      setRemainingMs(null);
-      return;
-    }
+    if (!isTestMode || !testAccess?.endTime) return undefined;
 
     const end = new Date(testAccess.endTime).getTime();
 
@@ -82,11 +79,13 @@ export default function TopBar({
       setRemainingMs(Math.max(diff, 0));
     };
 
-    tick();
-
+    const timeout = window.setTimeout(tick, 0);
     const interval = setInterval(tick, 1000);
 
-    return () => clearInterval(interval);
+    return () => {
+      window.clearTimeout(timeout);
+      clearInterval(interval);
+    };
   }, [isTestMode, testAccess?.endTime]);
 
   useEffect(() => {

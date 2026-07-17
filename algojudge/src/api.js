@@ -1,4 +1,6 @@
-const API_ORIGIN = "http://localhost:8080";
+const API_ORIGIN = (
+  import.meta.env?.VITE_API_ORIGIN || "http://localhost:8080"
+).replace(/\/$/, "");
 const BASE_URL = `${API_ORIGIN}/api`;
 
 export function assetUrl(path) {

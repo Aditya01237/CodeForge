@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { problems } from "../data/problems";
+import {
+  DIFFICULTIES,
+  filterProblems,
+  getProblemCategories,
+} from "../utils/problemFilters";
 
 const MONO = "'JetBrains Mono', 'Fira Code', ui-monospace, monospace";
-
-const DIFFICULTIES = ["All", "Easy", "Medium", "Hard"];
 
 const CATEGORY_FALLBACK = [
   "All",
@@ -180,28 +183,18 @@ export default function Dashboard() {
   }, [solved]);
 
   const categories = useMemo(() => {
-    const fromProblems = Array.from(
-      new Set(problems.map((p) => p.category).filter(Boolean)),
-    );
+    const fromProblems = getProblemCategories(problems);
 
-    if (fromProblems.length === 0) return CATEGORY_FALLBACK;
+    if (fromProblems.length === 1) return CATEGORY_FALLBACK;
 
-    return ["All", ...fromProblems];
+    return fromProblems;
   }, []);
 
   const filtered = useMemo(() => {
-    return problems.filter((p) => {
-      const title = p.title || "";
-      const cat = p.category || "";
-
-      const matchSearch =
-        title.toLowerCase().includes(search.toLowerCase()) ||
-        cat.toLowerCase().includes(search.toLowerCase());
-
-      const matchDifficulty = diff === "All" || p.difficulty === diff;
-      const matchCategory = category === "All" || cat === category;
-
-      return matchSearch && matchDifficulty && matchCategory;
+    return filterProblems(problems, {
+      query: search,
+      difficulty: diff,
+      category,
     });
   }, [search, diff, category]);
 

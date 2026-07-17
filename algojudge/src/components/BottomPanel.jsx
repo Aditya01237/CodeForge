@@ -225,9 +225,10 @@ export default function BottomPanel({
   }, [problem, setInput]);
 
   useEffect(() => {
-    if (output || running) {
-      setTab("output");
-    }
+    if (!output && !running) return undefined;
+
+    const timeout = window.setTimeout(() => setTab("output"), 0);
+    return () => window.clearTimeout(timeout);
   }, [output, running]);
 
   const isDark = theme === "dark";
