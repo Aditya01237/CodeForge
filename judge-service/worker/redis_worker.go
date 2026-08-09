@@ -35,33 +35,34 @@ func StartRedisWorker() {
 			continue
 		}
 
-		jobJson := result[1]
+		jobJSON := result[1]
 
 		var job models.JudgeJob
-		if err := json.Unmarshal([]byte(jobJson), &job); err != nil {
+		if err := json.Unmarshal([]byte(jobJSON), &job); err != nil {
 			log.Println("Invalid job JSON:", err)
 			continue
 		}
 
-		log.Println("🔥 Processing job:", job.JobID, "language:", job.Language)
+		log.Println("🔥 Processing batch job:", job.JobID, "language:", job.Language, "tests:", len(job.Inputs))
 
-		runReq := models.RunRequest{
+		runReq := models.BatchRunRequest{
 			Language: job.Language,
 			Code:     job.Code,
-			Input:    job.Input,
+			Inputs:   job.Inputs,
 		}
 
-		runResp := runner.RunCode(runReq)
+		runResp := runner.RunBatch(runReq)
 
 		judgeResult := models.JudgeResult{
-			JobID:  job.JobID,
-			Status: runResp.Status,
-			Output: runResp.Output,
-			Error:  runResp.Error,
-			TimeMs: runResp.TimeMs,
+			JobID:   job.JobID,
+			Results: runResp.Results,
 		}
 
-		resultBytes, _ := json.Marshal(judgeResult)
+		resultBytes, err := json.Marshal(judgeResult)
+		if err != nil {
+			log.Println("Failed to serialize judge result:", err)
+			continue
+		}
 
 		resultKey := resultPrefix + job.JobID
 
@@ -71,6 +72,6 @@ func StartRedisWorker() {
 			continue
 		}
 
-		log.Println("✅ Job completed:", job.JobID, "status:", runResp.Status)
+		log.Println("✅ Batch job completed:", job.JobID, "tests:", len(runResp.Results))
 	}
 }
