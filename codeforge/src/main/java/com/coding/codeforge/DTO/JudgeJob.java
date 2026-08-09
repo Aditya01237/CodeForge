@@ -1,18 +1,20 @@
 package com.coding.codeforge.DTO;
 
+import java.util.List;
+
 public class JudgeJob {
     private String jobId;
     private String language;
     private String code;
-    private String input;
+    private List<String> inputs;
 
     public JudgeJob() {}
 
-    public JudgeJob(String jobId, String language, String code, String input) {
+    public JudgeJob(String jobId, String language, String code, List<String> inputs) {
         this.jobId = jobId;
         this.language = language;
         this.code = code;
-        this.input = input;
+        this.inputs = inputs;
     }
 
     public String getJobId() {
@@ -39,11 +41,11 @@ public class JudgeJob {
         this.code = code;
     }
 
-    public String getInput() {
-        return input;
+    public List<String> getInputs() {
+        return inputs;
     }
 
-    public void setInput(String input) {
-        this.input = input;
+    public void setInputs(List<String> inputs) {
+        this.inputs = inputs;
     }
 }

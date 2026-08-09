@@ -37,6 +37,12 @@ manages problems, tests, participants, and submissions. Redis decouples the API
 from the Go worker, which executes untrusted code in network-disabled,
 resource-limited containers.
 
+Judge work is submission-scoped: Spring Boot sends all testcase inputs in one
+Redis job. The Go worker starts one isolated container for that job, compiles the
+submitted program once (or syntax-checks Python once), executes the testcase
+inputs sequentially with per-test timeouts, and destroys the sandbox after the
+batch completes.
+
 ## Technology
 
 | Layer | Stack |

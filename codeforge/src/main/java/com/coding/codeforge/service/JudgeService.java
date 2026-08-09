@@ -15,50 +15,47 @@ public class JudgeService {
     }
 
     public List<Map<String, Object>> runTestCases(String language, String code, List<TestCaseEntity> testCases) {
+        List<String> inputs = testCases.stream()
+                .map(TestCaseEntity::getInputData)
+                .toList();
+
+        List<ExecutionResultService> executionResults =
+                redisJudgeClientService.runTestCases(language, code, inputs);
 
         List<Map<String, Object>> results = new ArrayList<>();
-        int index = 1;
 
-        for (TestCaseEntity tc : testCases) {
-
-            ExecutionResultService res = redisJudgeClientService.runCode(
-                    language,
-                    code,
-                    tc.getInputData()
-            );
-
+        for (int i = 0; i < testCases.size(); i++) {
+            TestCaseEntity tc = testCases.get(i);
+            ExecutionResultService res = resultAt(executionResults, i);
             String verdict = getVerdict(res, tc.getExpectedOutput());
 
             results.add(Map.of(
-                    "testCase", "Test Case " + index,
+                    "testCase", "Test Case " + (i + 1),
                     "status", verdict,
                     "output", res.getOutput(),
                     "error", res.getError(),
                     "expected", tc.getExpectedOutput()
             ));
-
-            index++;
         }
 
         return results;
     }
 
     public Map<String, Object> submitTestCases(String language, String code, List<TestCaseEntity> testCases) {
+        List<String> inputs = testCases.stream()
+                .map(TestCaseEntity::getInputData)
+                .toList();
 
-        int index = 1;
+        List<ExecutionResultService> executionResults =
+                redisJudgeClientService.runTestCases(language, code, inputs);
 
-        for (TestCaseEntity tc : testCases) {
-
-            ExecutionResultService res = redisJudgeClientService.runCode(
-                    language,
-                    code,
-                    tc.getInputData()
-            );
-
+        for (int i = 0; i < testCases.size(); i++) {
+            TestCaseEntity tc = testCases.get(i);
+            ExecutionResultService res = resultAt(executionResults, i);
             String verdict = getVerdict(res, tc.getExpectedOutput());
+            int index = i + 1;
 
             if (!verdict.equals("OK")) {
-
                 return switch (verdict) {
                     case "CE" -> Map.of("status", "Compilation Error", "error", res.getError());
                     case "TLE" -> Map.of("status", "Time Limit Exceeded", "failedTestCase", index);
@@ -73,15 +70,24 @@ public class JudgeService {
                     );
                 };
             }
-
-            index++;
         }
 
         return Map.of("status", "Accepted");
     }
 
-    private String getVerdict(ExecutionResultService res, String expectedOutput) {
+    private ExecutionResultService resultAt(List<ExecutionResultService> results, int index) {
+        if (results != null && index >= 0 && index < results.size()) {
+            return results.get(index);
+        }
 
+        return new ExecutionResultService(
+                "RE",
+                "",
+                "Judge did not return a result for this testcase"
+        );
+    }
+
+    private String getVerdict(ExecutionResultService res, String expectedOutput) {
         if (res.getStatus().equals("CE")) return "CE";
         if (res.getStatus().equals("TLE")) return "TLE";
         if (res.getStatus().equals("RE")) return "RE";
