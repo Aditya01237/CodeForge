@@ -12,7 +12,10 @@ const normalizeStatus = (status) => {
   if (status === "CE" || status === "Compilation Error") return "COMPILE_ERROR";
   if (status === "TLE" || status === "Time Limit Exceeded") return "TLE";
   if (status === "RE" || status === "Runtime Error") return "RUNTIME_ERROR";
+  if (status === "OLE" || status === "Output Limit Exceeded") return "OUTPUT_LIMIT";
   if (status === "NO_OUTPUT" || status === "No Output") return "NO_OUTPUT";
+  if (status === "Judge Timeout") return "JUDGE_TIMEOUT";
+  if (status === "Judge Error") return "JUDGE_ERROR";
   return status;
 };
 
@@ -63,6 +66,15 @@ const statusMeta = (status) => {
         bg: "bg-red-50 dark:bg-red-400/10",
         border: "border-red-200 dark:border-red-400/20",
         dot: "bg-red-500",
+      };
+
+    case "OUTPUT_LIMIT":
+      return {
+        label: "Output Limit Exceeded",
+        color: "text-orange-700 dark:text-orange-300",
+        bg: "bg-orange-50 dark:bg-orange-400/10",
+        border: "border-orange-200 dark:border-orange-400/20",
+        dot: "bg-orange-500",
       };
 
     case "NO_OUTPUT":
@@ -392,6 +404,30 @@ export default function BottomPanel({
                   </div>
                 )}
 
+                {Number.isFinite(output.passedTestCases) &&
+                  Number.isFinite(output.totalTestCases) && (
+                    <div
+                      className={`grid grid-cols-2 gap-px overflow-hidden rounded-2xl border ${
+                        isDark
+                          ? "border-white/10 bg-white/10"
+                          : "border-slate-200 bg-slate-200"
+                      }`}
+                    >
+                      <div className={isDark ? "bg-[#111111] p-4" : "bg-white p-4"}>
+                        <Label theme={theme}>Hidden tests</Label>
+                        <div className="text-lg font-semibold">
+                          {output.passedTestCases} / {output.totalTestCases}
+                        </div>
+                      </div>
+                      <div className={isDark ? "bg-[#111111] p-4" : "bg-white p-4"}>
+                        <Label theme={theme}>Score</Label>
+                        <div className="text-lg font-semibold">
+                          {output.score ?? 0} / 100
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                 {normalizeStatus(output.status) === "ACCEPTED" && (
                   <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300">
                     All hidden test cases passed successfully.
@@ -399,17 +435,10 @@ export default function BottomPanel({
                 )}
 
                 {normalizeStatus(output.status) === "WRONG_ANSWER" && (
-                  <>
-                    <div>
-                      <Label theme={theme}>Your Output</Label>
-                      <CodeBlock theme={theme}>{output.output}</CodeBlock>
-                    </div>
-
-                    <div>
-                      <Label theme={theme}>Expected Output</Label>
-                      <CodeBlock theme={theme}>{output.expected}</CodeBlock>
-                    </div>
-                  </>
+                  <div className={`rounded-2xl border px-4 py-4 text-sm ${emptyClass}`}>
+                    Some hidden test cases failed. Their inputs and expected outputs remain
+                    private; use the score above to measure partial progress.
+                  </div>
                 )}
 
                 {normalizeStatus(output.status) === "COMPILE_ERROR" && (
@@ -426,6 +455,19 @@ export default function BottomPanel({
 
                 {normalizeStatus(output.status) === "NO_OUTPUT" && (
                   <ErrorBlock theme={theme} message="Your program did not print anything." />
+                )}
+
+                {normalizeStatus(output.status) === "OUTPUT_LIMIT" && (
+                  <ErrorBlock theme={theme} message="Your program produced too much output." />
+                )}
+
+                {["JUDGE_TIMEOUT", "JUDGE_ERROR"].includes(
+                  normalizeStatus(output.status),
+                ) && (
+                  <ErrorBlock
+                    theme={theme}
+                    message={output.error || "The judge could not complete this submission. Please retry."}
+                  />
                 )}
               </div>
             )}

@@ -5,7 +5,10 @@ import com.coding.codeforge.entity.*;
 import com.coding.codeforge.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -13,25 +16,32 @@ import java.util.List;
 @Service
 public class CodingTestService {
 
+    private static final int MAX_SAMPLE_CASES = 10;
+    private static final int MAX_HIDDEN_CASES = 50;
+    private static final int MAX_TEST_CASE_TEXT_LENGTH = 100_000;
+
     private final CodingTestRepository codingTestRepository;
     private final TestProblemRepository testProblemRepository;
     private final ProblemRepository problemRepository;
     private final UserRepository userRepository;
     private final TestParticipantRepository testParticipantRepository;
     private final TestCaseRepository testCaseRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public CodingTestService(CodingTestRepository codingTestRepository,
                              TestProblemRepository testProblemRepository,
                              ProblemRepository problemRepository,
                              UserRepository userRepository,
                              TestParticipantRepository testParticipantRepository,
-                             TestCaseRepository testCaseRepository) {
+                             TestCaseRepository testCaseRepository,
+                             PasswordEncoder passwordEncoder) {
         this.codingTestRepository = codingTestRepository;
         this.testProblemRepository = testProblemRepository;
         this.problemRepository = problemRepository;
         this.userRepository = userRepository;
         this.testParticipantRepository = testParticipantRepository;
         this.testCaseRepository = testCaseRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public CodingTest createTest(CodingTestRequest request) {
@@ -43,11 +53,14 @@ public class CodingTestService {
 
         codingTest.setTitle(request.getTitle());
         codingTest.setTestCode(request.getTestCode());
-        codingTest.setTestPassword(
-                request.getTestPassword() == null || request.getTestPassword().isBlank()
-                        ? "123456"
-                        : request.getTestPassword()
-        );
+        String rawPassword = clean(request.getTestPassword());
+        if (rawPassword == null || rawPassword.isBlank()) {
+            throw new RuntimeException("Test password is required");
+        }
+        if (rawPassword.length() > 128) {
+            throw new RuntimeException("Test password is too long");
+        }
+        codingTest.setTestPassword(passwordEncoder.encode(rawPassword));
 
         codingTest.setAllowExternalParticipants(
                 request.getAllowExternalParticipants() == null
@@ -117,9 +130,13 @@ public class CodingTestService {
             throw new RuntimeException("Problem title is required");
         }
 
+        validateTestCaseCount(request.getSampleTestCases(), MAX_SAMPLE_CASES, "sample");
+        validateTestCaseCount(request.getHiddenTestCases(), MAX_HIDDEN_CASES, "hidden");
+
         Problem problem = new Problem();
         problem.setTitle(clean(request.getTitle()));
         problem.setDifficulty(clean(request.getDifficulty()));
+        problem.setCategory(clean(request.getCategory()));
         problem.setDescription(clean(request.getDescription()));
         problem.setInputFormat(clean(request.getInputFormat()));
         problem.setOutputFormat(clean(request.getOutputFormat()));
@@ -180,8 +197,13 @@ public class CodingTestService {
         String actualPassword = codingTest.getTestPassword();
         String givenPassword = request.getTestPassword();
 
-        if (actualPassword == null || givenPassword == null || !actualPassword.equals(givenPassword)) {
+        if (actualPassword == null || givenPassword == null || !passwordMatches(actualPassword, givenPassword)) {
             throw new RuntimeException("Invalid test password");
+        }
+
+        if (!isPasswordHash(actualPassword)) {
+            codingTest.setTestPassword(passwordEncoder.encode(givenPassword));
+            codingTestRepository.save(codingTest);
         }
 
         return new TestAccessResponse(
@@ -194,6 +216,23 @@ public class CodingTestService {
                 codingTest.getEndTime(),
                 codingTest.getDurationMinutes()
         );
+    }
+
+    private boolean passwordMatches(String storedPassword, String givenPassword) {
+        if (isPasswordHash(storedPassword)) {
+            return passwordEncoder.matches(givenPassword, storedPassword);
+        }
+
+        return MessageDigest.isEqual(
+                storedPassword.getBytes(StandardCharsets.UTF_8),
+                givenPassword.getBytes(StandardCharsets.UTF_8)
+        );
+    }
+
+    private boolean isPasswordHash(String password) {
+        return password.startsWith("$2a$")
+                || password.startsWith("$2b$")
+                || password.startsWith("$2y$");
     }
 
     public ParticipantResponse registerParticipant(Long testId, ParticipantRequest request) {
@@ -375,14 +414,25 @@ public class CodingTestService {
             String output = clean(request.getExpectedOutput());
 
             if (input == null && output == null) continue;
+            if ((input != null && input.length() > MAX_TEST_CASE_TEXT_LENGTH)
+                    || (output != null && output.length() > MAX_TEST_CASE_TEXT_LENGTH)) {
+                throw new RuntimeException("Test case input or output is too large");
+            }
 
             TestCaseEntity testCase = new TestCaseEntity();
             testCase.setProblem(problem);
             testCase.setInputData(input == null ? "" : input);
             testCase.setExpectedOutput(output == null ? "" : output);
+            testCase.setExplanation(hidden ? null : clean(request.getExplanation()));
             testCase.setHidden(hidden);
 
             testCaseRepository.save(testCase);
+        }
+    }
+
+    private void validateTestCaseCount(List<TestCaseRequest> requests, int maximum, String type) {
+        if (requests != null && requests.size() > maximum) {
+            throw new RuntimeException("Too many " + type + " test cases");
         }
     }
 

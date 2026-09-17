@@ -12,7 +12,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "http://localhost:5173")
 public class ProblemController {
 
     private final ProblemService problemService;
@@ -52,8 +51,4 @@ public class ProblemController {
         return testCaseService.getSampleTestCases(problemId);
     }
 
-    @GetMapping("/faculty/problems/{problemId}/testcases")
-    public List<TestCaseEntity> getAllTestCases(@PathVariable Long problemId) {
-        return testCaseService.getAllTestCasesForProblem(problemId);
-    }
 }

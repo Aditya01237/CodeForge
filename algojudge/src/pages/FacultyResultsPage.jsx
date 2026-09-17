@@ -9,6 +9,7 @@ import {
   RefreshCcw,
   Search,
   Sun,
+  Trophy,
   X,
 } from "lucide-react";
 import { apiGet } from "../api";
@@ -307,6 +308,14 @@ export default function FacultyResultsPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(`/faculty/tests/${testId}/live`)}
+            className="h-10 px-4 rounded-xl border border-amber-400/30 bg-amber-500/10 text-amber-400 flex items-center gap-2 text-sm font-semibold transition"
+          >
+            <Trophy size={15} />
+            Live Ranking
+          </button>
+
           <button
             onClick={() => loadResults({ silent: true })}
             disabled={refreshing}

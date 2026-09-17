@@ -22,6 +22,7 @@ export default function EditorPanel({
   lang = "C++",
   onLangChange,
   theme = "dark",
+  readOnly = false,
 }) {
   const [fontSize, setFontSize] = useState(() => {
     const saved = Number(localStorage.getItem("cf_editor_font_size"));
@@ -294,6 +295,7 @@ export default function EditorPanel({
             setCode(updated);
           }}
           options={{
+            readOnly,
             fontSize,
             fontFamily: "JetBrains Mono, Fira Code, monospace",
             minimap: { enabled: false },

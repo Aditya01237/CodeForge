@@ -60,7 +60,10 @@ public class SubmissionService {
         String status = extractString(judgeResult, "status", "Unknown");
 
         Integer failedTestCase = extractInteger(judgeResult, "failedTestCase");
-        int passedTestCases = calculatePassedTestCases(status, failedTestCase, totalTestCases);
+        Integer reportedPassedTestCases = extractInteger(judgeResult, "passedTestCases");
+        int passedTestCases = reportedPassedTestCases == null
+                ? calculatePassedTestCases(status, failedTestCase, totalTestCases)
+                : Math.max(0, Math.min(totalTestCases, reportedPassedTestCases));
         int score = calculateScore(status, passedTestCases, totalTestCases);
 
         Submission submission = new Submission();
@@ -250,6 +253,77 @@ public class SubmissionService {
         response.setOutput(submission.getOutput());
         response.setError(submission.getError());
         response.setSubmittedAt(submission.getSubmittedAt());
+
+        return response;
+    }
+
+    public TestLeaderboardResponse getTestLeaderboard(Long testId) {
+        FacultyTestResultDashboardResponse dashboard = getFacultyTestResultDashboard(testId);
+        List<FacultyParticipantResultResponse> rankedParticipants =
+                new ArrayList<>(dashboard.getParticipants());
+
+        rankedParticipants.removeIf(participant ->
+                "DISQUALIFIED".equalsIgnoreCase(participant.getStatus())
+        );
+
+        rankedParticipants.sort((a, b) -> {
+            int scoreCompare = Integer.compare(
+                    safeScore(b.getTotalScore()),
+                    safeScore(a.getTotalScore())
+            );
+            if (scoreCompare != 0) return scoreCompare;
+
+            int solvedCompare = Integer.compare(
+                    safeScore(b.getSolvedCount()),
+                    safeScore(a.getSolvedCount())
+            );
+            if (solvedCompare != 0) return solvedCompare;
+
+            LocalDateTime aTime = a.getLatestSubmittedAt();
+            LocalDateTime bTime = b.getLatestSubmittedAt();
+
+            if (aTime == null && bTime != null) return 1;
+            if (aTime != null && bTime == null) return -1;
+            if (aTime != null && bTime != null) {
+                int timeCompare = aTime.compareTo(bTime);
+                if (timeCompare != 0) return timeCompare;
+            }
+
+            String aName = a.getRollNumber() != null ? a.getRollNumber() : safe(a.getName());
+            String bName = b.getRollNumber() != null ? b.getRollNumber() : safe(b.getName());
+            return aName.compareToIgnoreCase(bName);
+        });
+
+        List<LeaderboardEntryResponse> entries = new ArrayList<>();
+
+        for (int index = 0; index < rankedParticipants.size(); index++) {
+            FacultyParticipantResultResponse participant = rankedParticipants.get(index);
+            LeaderboardEntryResponse entry = new LeaderboardEntryResponse();
+
+            entry.setRank(index + 1);
+            entry.setParticipantId(participant.getParticipantId());
+            entry.setRollNumber(participant.getRollNumber());
+            entry.setDisplayName(
+                    participant.getName() == null || participant.getName().isBlank()
+                            ? participant.getRollNumber()
+                            : participant.getName()
+            );
+            entry.setStatus(participant.getStatus());
+            entry.setSolvedCount(safeScore(participant.getSolvedCount()));
+            entry.setAttemptedCount(safeScore(participant.getAttemptedCount()));
+            entry.setTotalScore(safeScore(participant.getTotalScore()));
+            entry.setMaxScore(safeScore(participant.getMaxScore()));
+            entry.setLatestSubmittedAt(participant.getLatestSubmittedAt());
+            entries.add(entry);
+        }
+
+        TestLeaderboardResponse response = new TestLeaderboardResponse();
+        response.setTestId(dashboard.getTestId());
+        response.setTitle(dashboard.getTitle());
+        response.setTotalProblems(dashboard.getTotalProblems());
+        response.setTotalParticipants(dashboard.getTotalParticipants());
+        response.setGeneratedAt(LocalDateTime.now());
+        response.setEntries(entries);
 
         return response;
     }

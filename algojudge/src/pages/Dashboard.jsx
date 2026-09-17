@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { problems } from "../data/problems";
+import { Menu, X } from "lucide-react";
+import { apiGet } from "../api";
 import {
   DIFFICULTIES,
   filterProblems,
@@ -164,6 +165,10 @@ export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [diff, setDiff] = useState("All");
   const [category, setCategory] = useState("All");
+  const [libraryProblems, setLibraryProblems] = useState([]);
+  const [problemsLoading, setProblemsLoading] = useState(true);
+  const [problemsError, setProblemsError] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [solved, setSolved] = useState(() => {
     try {
@@ -179,24 +184,36 @@ export default function Dashboard() {
   }, [theme]);
 
   useEffect(() => {
+    apiGet("/problems")
+      .then((data) => {
+        setLibraryProblems(Array.isArray(data) ? data : []);
+        setProblemsError("");
+      })
+      .catch((error) =>
+        setProblemsError(error.message || "Unable to load the problem library."),
+      )
+      .finally(() => setProblemsLoading(false));
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem("cf_solved", JSON.stringify([...solved]));
   }, [solved]);
 
   const categories = useMemo(() => {
-    const fromProblems = getProblemCategories(problems);
+    const fromProblems = getProblemCategories(libraryProblems);
 
     if (fromProblems.length === 1) return CATEGORY_FALLBACK;
 
     return fromProblems;
-  }, []);
+  }, [libraryProblems]);
 
   const filtered = useMemo(() => {
-    return filterProblems(problems, {
+    return filterProblems(libraryProblems, {
       query: search,
       difficulty: diff,
       category,
     });
-  }, [search, diff, category]);
+  }, [libraryProblems, search, diff, category]);
 
   const toggleSolved = (e, id) => {
     e.stopPropagation();
@@ -208,23 +225,31 @@ export default function Dashboard() {
     });
   };
 
-  const total = problems.length;
-  const solvedCount = solved.size;
+  const total = libraryProblems.length;
+  const solvedCount = libraryProblems.filter((problem) =>
+    solved.has(problem.id),
+  ).length;
   const pct = total ? Math.round((solvedCount / total) * 100) : 0;
 
-  const easyTotal = problems.filter((p) => p.difficulty === "Easy").length;
-  const mediumTotal = problems.filter((p) => p.difficulty === "Medium").length;
-  const hardTotal = problems.filter((p) => p.difficulty === "Hard").length;
+  const easyTotal = libraryProblems.filter(
+    (p) => p.difficulty === "Easy",
+  ).length;
+  const mediumTotal = libraryProblems.filter(
+    (p) => p.difficulty === "Medium",
+  ).length;
+  const hardTotal = libraryProblems.filter(
+    (p) => p.difficulty === "Hard",
+  ).length;
 
-  const easySolved = problems.filter(
+  const easySolved = libraryProblems.filter(
     (p) => p.difficulty === "Easy" && solved.has(p.id),
   ).length;
 
-  const mediumSolved = problems.filter(
+  const mediumSolved = libraryProblems.filter(
     (p) => p.difficulty === "Medium" && solved.has(p.id),
   ).length;
 
-  const hardSolved = problems.filter(
+  const hardSolved = libraryProblems.filter(
     (p) => p.difficulty === "Hard" && solved.has(p.id),
   ).length;
 
@@ -254,7 +279,7 @@ export default function Dashboard() {
     <div className={`min-h-screen ${pageBg} font-sans`}>
       {/* NAVBAR */}
       <nav
-        className={`sticky top-0 z-40 h-16 flex items-center justify-between px-6 border-b backdrop-blur ${navClass}`}
+        className={`sticky top-0 z-40 h-16 flex items-center justify-between px-4 sm:px-6 border-b backdrop-blur ${navClass}`}
       >
         <div className="flex items-center gap-8">
           <button
@@ -280,8 +305,11 @@ export default function Dashboard() {
               Tests
             </button>
 
-            <button className={`${muted} hover:text-blue-400 transition`}>
-              Submissions
+            <button
+              onClick={() => navigate("/interview")}
+              className={`${muted} hover:text-violet-400 transition`}
+            >
+              Interviews
             </button>
           </div>
         </div>
@@ -303,7 +331,7 @@ export default function Dashboard() {
           </button>
 
           <div
-            className={`w-10 h-10 flex items-center justify-center rounded-full text-xs font-semibold ${
+            className={`hidden sm:flex w-10 h-10 items-center justify-center rounded-full text-xs font-semibold ${
               theme === "dark"
                 ? "bg-white/10 text-slate-200"
                 : "bg-slate-100 text-slate-700"
@@ -311,14 +339,60 @@ export default function Dashboard() {
           >
             AP
           </div>
+
+          <button
+            type="button"
+            aria-label={mobileMenuOpen ? "Close navigation" : "Open navigation"}
+            onClick={() => setMobileMenuOpen((open) => !open)}
+            className={`md:hidden h-10 w-10 rounded-xl border flex items-center justify-center transition ${
+              theme === "dark"
+                ? "border-white/10 bg-white/5 text-slate-200"
+                : "border-slate-200 bg-white text-slate-700"
+            }`}
+          >
+            {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+          </button>
         </div>
+
+        {mobileMenuOpen && (
+          <div
+            className={`absolute left-4 right-4 top-[calc(100%+0.75rem)] rounded-2xl border p-2 shadow-2xl md:hidden ${
+              theme === "dark"
+                ? "border-white/10 bg-[#111827]"
+                : "border-slate-200 bg-white"
+            }`}
+          >
+            {[
+              ["Practice Library", "/practice"],
+              ["Join Coding Test", "/test-access"],
+              ["Interview Studio", "/interview"],
+              ["Faculty Dashboard", "/faculty"],
+            ].map(([label, path]) => (
+              <button
+                key={path}
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  navigate(path);
+                }}
+                className={`w-full rounded-xl px-4 py-3 text-left text-sm font-semibold transition ${
+                  theme === "dark"
+                    ? "text-slate-200 hover:bg-white/5"
+                    : "text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
       </nav>
 
-      <main className="max-w-7xl mx-auto px-6 py-10">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
         {/* HERO */}
         <section className="grid lg:grid-cols-[1.25fr_0.75fr] gap-7 items-stretch mb-8">
           <div
-            className={`rounded-3xl border p-8 lg:p-10 relative overflow-hidden ${cardClass}`}
+            className={`rounded-3xl border p-6 sm:p-8 lg:p-10 relative overflow-hidden ${cardClass}`}
           >
             <div
               className={`absolute -right-20 -top-20 w-72 h-72 rounded-full blur-3xl ${
@@ -334,7 +408,7 @@ export default function Dashboard() {
                 DSA Practice + Coding Tests
               </div>
 
-              <h1 className="text-5xl lg:text-6xl font-black tracking-tight leading-tight mb-5">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight mb-5">
                 Master DSA.
                 <br />
                 <span className="text-blue-400">Crack coding tests.</span>
@@ -365,6 +439,17 @@ export default function Dashboard() {
                   }`}
                 >
                   Join Coding Test
+                </button>
+
+                <button
+                  onClick={() => navigate("/interview")}
+                  className={`h-12 px-6 rounded-xl border font-semibold transition ${
+                    theme === "dark"
+                      ? "border-violet-400/30 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20"
+                      : "border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100"
+                  }`}
+                >
+                  Practice Mock Interview
                 </button>
               </div>
             </div>
@@ -531,7 +616,15 @@ export default function Dashboard() {
             <span>Done</span>
           </div>
 
-          {filtered.length === 0 ? (
+          {problemsLoading ? (
+            <div className={`p-12 text-center ${muted}`}>
+              Loading the DSA problem library...
+            </div>
+          ) : problemsError ? (
+            <div className="p-6 text-center text-rose-400">
+              {problemsError}
+            </div>
+          ) : filtered.length === 0 ? (
             <div className={`p-12 text-center ${muted}`}>
               No problems found.
             </div>

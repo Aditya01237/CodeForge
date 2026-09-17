@@ -12,6 +12,8 @@ import {
   ExternalLink,
   BookOpen,
   BarChart3,
+  Trophy,
+  BrainCircuit,
 } from "lucide-react";
 import { apiGet } from "../api";
 
@@ -109,19 +111,20 @@ export default function FacultyDashboard() {
   return (
     <div className={`min-h-screen ${pageClass}`}>
       <nav
-        className={`h-16 px-6 flex items-center justify-between border-b ${navClass}`}
+        className={`h-16 px-3 sm:px-6 flex items-center justify-between border-b ${navClass}`}
       >
-        <div className="flex items-center gap-4">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-4">
           <button
             onClick={() => navigate("/")}
-            className={`h-10 w-10 rounded-xl border flex items-center justify-center transition ${softButton}`}
+            aria-label="Student dashboard"
+            className={`h-10 w-10 shrink-0 rounded-xl border flex items-center justify-center transition ${softButton}`}
           >
             <Home size={17} />
           </button>
 
           <button
             onClick={() => navigate("/")}
-            className="text-xl font-bold text-[#58A6FF]"
+            className="hidden text-xl font-bold text-[#58A6FF] sm:block"
             style={{ fontFamily: MONO }}
           >
             CodeForge
@@ -141,29 +144,31 @@ export default function FacultyDashboard() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={() => setTheme(isDark ? "light" : "dark")}
-            className={`h-10 px-4 rounded-xl border flex items-center gap-2 text-sm font-semibold transition ${softButton}`}
+            aria-label={`Switch to ${isDark ? "light" : "dark"} theme`}
+            className={`h-10 w-10 sm:w-auto sm:px-4 rounded-xl border flex items-center justify-center gap-2 text-sm font-semibold transition ${softButton}`}
           >
             {isDark ? <Sun size={15} /> : <Moon size={15} />}
-            {isDark ? "Light" : "Dark"}
+            <span className="hidden sm:inline">{isDark ? "Light" : "Dark"}</span>
           </button>
 
           <button
             onClick={() => navigate("/faculty/tests/create")}
-            className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition flex items-center gap-2"
+            className="h-10 px-3 sm:px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition flex items-center gap-2"
           >
             <Plus size={16} />
-            Create Test
+            <span className="sm:hidden">Create</span>
+            <span className="hidden sm:inline">Create Test</span>
           </button>
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-6 py-10">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
         <section className="grid lg:grid-cols-[1.2fr_0.8fr] gap-6 mb-8">
           <div
-            className={`rounded-3xl border p-8 relative overflow-hidden ${cardClass}`}
+            className={`rounded-3xl border p-6 sm:p-8 relative overflow-hidden ${cardClass}`}
           >
             <div
               className={`absolute -right-20 -top-20 h-72 w-72 rounded-full blur-3xl ${
@@ -179,13 +184,13 @@ export default function FacultyDashboard() {
                 Faculty Control Center
               </div>
 
-              <h1 className="text-5xl font-black leading-tight mb-4">
+              <h1 className="text-4xl sm:text-5xl font-black leading-tight mb-4">
                 Create tests.
                 <br />
                 <span className="text-[#58A6FF]">Track results.</span>
               </h1>
 
-              <p className={`text-lg leading-8 max-w-2xl ${muted}`}>
+              <p className={`text-base sm:text-lg leading-8 max-w-2xl ${muted}`}>
                 Build coding tests with password access, attach DSA problems,
                 monitor submissions, and view participant-wise results from the
                 faculty result dashboard.
@@ -205,6 +210,14 @@ export default function FacultyDashboard() {
                   className={`h-12 px-6 rounded-xl border font-semibold transition ${softButton}`}
                 >
                   View Student Dashboard
+                </button>
+
+                <button
+                  onClick={() => navigate("/interview")}
+                  className="h-12 px-6 rounded-xl border border-violet-400/30 bg-violet-500/10 text-violet-400 font-semibold transition flex items-center gap-2"
+                >
+                  <BrainCircuit size={17} />
+                  Interview Studio
                 </button>
               </div>
             </div>
@@ -312,13 +325,13 @@ export default function FacultyDashboard() {
                       <div className="text-xs uppercase tracking-widest text-slate-500 mb-1">
                         Password
                       </div>
-                      <button
-                        onClick={() => copyText(test.testPassword || "")}
-                        className={`h-9 px-3 rounded-xl border flex items-center gap-2 text-sm transition ${softButton}`}
+                      <div
+                        className={`h-9 px-3 rounded-xl border flex items-center gap-2 text-sm ${softButton}`}
+                        title="Passwords are stored as one-way hashes and cannot be displayed."
                       >
                         <LockKeyhole size={14} />
-                        {test.testPassword || "—"}
-                      </button>
+                        Stored securely
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap gap-2">
@@ -348,6 +361,16 @@ export default function FacultyDashboard() {
                       >
                         <BarChart3 size={15} />
                         Results
+                      </button>
+
+                      <button
+                        onClick={() =>
+                          navigate(`/faculty/tests/${test.id}/live`)
+                        }
+                        className="h-10 px-4 rounded-xl border border-amber-400/30 bg-amber-500/10 text-amber-400 text-sm font-semibold transition flex items-center gap-2"
+                      >
+                        <Trophy size={15} />
+                        Live
                       </button>
                     </div>
                   </div>

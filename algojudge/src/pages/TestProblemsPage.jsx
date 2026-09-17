@@ -19,6 +19,7 @@ import {
   Circle,
   RefreshCcw,
   LogOut,
+  Trophy,
 } from "lucide-react";
 
 const MONO = "'JetBrains Mono', 'Fira Code', ui-monospace, monospace";
@@ -398,6 +399,15 @@ export default function TestProblemsPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(`/test/${testId}/leaderboard`)}
+            disabled={finishing}
+            className="hidden lg:flex h-10 px-4 rounded-xl border border-amber-400/30 bg-amber-500/10 text-amber-400 items-center gap-2 text-sm font-semibold transition"
+          >
+            <Trophy size={15} />
+            Live Ranking
+          </button>
+
           <div
             className={`h-10 px-4 rounded-xl border flex items-center gap-2 text-sm font-bold ${timerClass}`}
             style={{ fontFamily: MONO }}

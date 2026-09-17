@@ -1,6 +1,7 @@
 package com.coding.codeforge.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -18,6 +19,8 @@ public class CodingTest {
     @Column(unique = true)
     private String testCode;
 
+    @JsonIgnore
+    @Column(length = 100)
     private String testPassword;
 
     private Boolean allowExternalParticipants = true;
@@ -46,6 +49,7 @@ public class CodingTest {
         return testCode;
     }
 
+    @JsonIgnore
     public String getTestPassword() {
         return testPassword;
     }

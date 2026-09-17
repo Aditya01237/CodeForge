@@ -1,5 +1,5 @@
 const API_ORIGIN = (
-  import.meta.env?.VITE_API_ORIGIN || "http://localhost:8080"
+  import.meta.env?.VITE_API_ORIGIN || window.location.origin
 ).replace(/\/$/, "");
 const BASE_URL = `${API_ORIGIN}/api`;
 
@@ -9,8 +9,13 @@ export function assetUrl(path) {
   return `${API_ORIGIN}${path}`;
 }
 
-export async function apiGet(path) {
-  const res = await fetch(`${BASE_URL}${path}`);
+export async function apiGet(path, options = {}) {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+    },
+  });
 
   if (!res.ok) {
     const text = await res.text();
@@ -20,11 +25,13 @@ export async function apiGet(path) {
   return res.json();
 }
 
-export async function apiPost(path, body) {
+export async function apiPost(path, body, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
+    ...options,
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...(options.headers || {}),
     },
     body: JSON.stringify(body),
   });

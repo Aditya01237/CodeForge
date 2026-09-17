@@ -16,6 +16,9 @@ public class TestCaseEntity {
     @Column(columnDefinition = "TEXT")
     private String expectedOutput;
 
+    @Column(columnDefinition = "TEXT")
+    private String explanation;
+
     private boolean hidden;
 
     @ManyToOne
@@ -36,6 +39,10 @@ public class TestCaseEntity {
         return expectedOutput;
     }
 
+    public String getExplanation() {
+        return explanation;
+    }
+
     public boolean isHidden() {
         return hidden;
     }
@@ -54,6 +61,10 @@ public class TestCaseEntity {
 
     public void setExpectedOutput(String expectedOutput) {
         this.expectedOutput = expectedOutput;
+    }
+
+    public void setExplanation(String explanation) {
+        this.explanation = explanation;
     }
 
     public void setHidden(boolean hidden) {

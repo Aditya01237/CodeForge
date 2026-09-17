@@ -1,0 +1,163 @@
+%-------------------------
+% Resume in LaTeX — Aditya Pareek
+% Compact 1-page version
+%-------------------------
+\documentclass[letterpaper,11pt]{article}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{fontawesome5}
+\input{glyphtounicode}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Tight margins for 1-page fit
+\usepackage[top=0.38in, bottom=0.38in, left=0.45in, right=0.45in]{geometry}
+
+\urlstyle{same}
+
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+% Section formatting
+\titleformat{\section}{
+  \vspace{-6pt}\scshape\raggedright\large\bfseries
+}{}{0em}{}[\color{black}\titlerule\vspace{-4pt}]
+
+\pdfgentounicode=1
+
+%-------------------------
+% Custom commands
+\newcommand{\resumeItem}[1]{
+  \item\small{#1\vspace{-3pt}}
+}
+
+\newcommand{\resumeSubheading}[5]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{1.0\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textbf{#1} $|$ #2 & #3 \\
+      \textit{#4} & \textbf{#5} \\
+    \end{tabular*}\vspace{-5pt}
+}
+
+% Project heading: name | GitHub icon on line 1 with date, tech stack on line 2
+% #1=name, #2=tech, #3=date, #4=github url
+\newcommand{\resumeProjectHeading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{1.0\textwidth}[t]{@{}p{0.72\textwidth}@{\extracolsep{\fill}}r@{}}
+      \textbf{#1} \; $|$ \; {\small\faGithub}\ \href{#4}{Github} & \textbf{\small #3} \\
+      \multicolumn{2}{@{}l@{}}{\textit{\small #2}} \\
+    \end{tabular*}\vspace{-5pt}
+}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.0in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}[leftmargin=0.15in]}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-4pt}}
+
+%-------------------------------------------
+\begin{document}
+
+%---------- HEADING ----------
+\begin{center}
+    {\Huge \textsc{Aditya Pareek}} \\[3pt]
+    {\small International Institute of Information Technology, Bangalore} \\[3pt]
+    \small
+    \faPhone\ 7297958039 \quad $|$ \quad
+    \faEnvelope\ \href{mailto:pareekaditya01@gmail.com}{pareekaditya01@gmail.com} \quad $|$ \quad
+    \faLinkedin\ \href{https://linkedin.com}{LinkedIn} \quad $|$ \quad
+    \faGithub\ \href{https://github.com/Aditya01237}{GitHub}
+\end{center}
+\vspace{-12pt}
+
+%-----------EDUCATION-----------
+\section{Education}
+\resumeSubHeadingListStart
+  \resumeSubheading
+    {International Institute of Information Technology Bangalore}{Bengaluru}
+    {Aug 2025 -- Present}
+    {Master of Technology in Computer Science \& Engineering}{GPA : 3.45 / 4.00}
+  \resumeSubheading
+    {Manipal University Jaipur}{Jaipur}
+    {Aug 2020 -- May 2024}
+    {Bachelor of Technology in Computer Science \& Engineering}{GPA : 3.44 / 4.00}
+\resumeSubHeadingListEnd
+\vspace{-4pt}
+
+%-----------PROJECTS-----------
+\section{Projects}
+\resumeSubHeadingListStart
+
+\resumeProjectHeading
+    {SwasthyaSetu}
+    {Java, Spring Boot, React, PostgreSQL, RabbitMQ, Redis, Docker, Kubernetes, Ansible, HashiCorp Vault, ELK}
+    {Mar 2026 -- May 2026}
+    {https://github.com/Aditya01237/SwasthyaSetu}
+  \resumeItemListStart
+    \resumeItem{Designed and developed a \textbf{healthcare platform} with \textbf{Spring Boot microservices} (auth, patient, hospital, appointment, notification, API gateway, AI, backend), containerized with \textbf{Docker} and deployed on a local \textbf{Minikube Kubernetes} cluster using an \textbf{Ansible-driven Jenkins CI/CD} pipeline.}
+    \resumeItem{Built \textbf{OTP-based authentication} using \textbf{RabbitMQ} for asynchronous notification delivery and \textbf{HashiCorp Vault} for SMTP secret management, removing hardcoded credentials from Kubernetes manifests.}
+    \resumeItem{Implemented \textbf{QR-based time-bound access control} so doctors can view patient records only during active appointments, with logging to track record access events.}
+    \resumeItem{Used \textbf{Redis distributed locks} to prevent appointment-slot race conditions, integrated the \textbf{ELK stack} for centralized log monitoring across services; configured \textbf{HPA} for auto-scaling.}
+  \resumeItemListEnd
+
+  \resumeProjectHeading
+    {CodeForge}
+    {React, JavaScript, Tailwind CSS, Monaco Editor, Spring Boot, Go, MySQL, Redis, Docker}
+    {Jun 2026 -- Jul 2026}
+    {https://github.com/Aditya01237/CodeForge}
+  \resumeItemListStart
+    \resumeItem{Built a \textbf{full-stack coding assessment platform} with separate student and faculty workflows for DSA practice, timed tests, problem management, submissions, and result analysis.}
+    \resumeItem{Developed a \textbf{LeetCode-style coding workspace} using React and Monaco Editor with resizable problem, editor, and console panels, multi-language support, custom test input, dark/light themes, and locally persisted code.}
+    \resumeItem{Integrated the React frontend with REST APIs for problem retrieval, code execution, submission evaluation, test management, and file uploads, with loading, error, and expired-session handling.}
+  \resumeItemListEnd
+
+  \resumeProjectHeading
+    {ChunkCrafter}
+    {Java, Spring Boot, React, JavaScript, Gemini API, Tailwind CSS}
+    {Mar 2026 -- May 2026}
+    {https://github.com/Aditya01237/Custom-E-Book}
+  \resumeItemListStart
+    \resumeItem{Built a \textbf{full-stack ed-tech micro-content marketplace} where authors monetize individual chapters or media clips and students assemble personalized e-books, supporting PDF, video, audio, image, and text chunk types.}
+    \resumeItem{Engineered a \textbf{virtual chunking engine} using \textbf{Apache PDFBox} (page-range trimming) and \textbf{FFmpeg} (timestamp-based video/audio extraction), enabling partial content delivery without duplicating source files.}
+    \resumeItem{Integrated \textbf{Gemini API} for \textbf{AI-assisted chapter boundary detection} in uploaded PDFs with a fallback to logical splitting, reducing manual author effort during content segmentation.}
+    \resumeItem{Implemented \textbf{EPUB export pipeline} using \textbf{JAXB XML serialization} and \textbf{XSD schema validation}, generating standards-compliant e-books with embedded media, custom ordering, and student study notes.}
+  \resumeItemListEnd
+
+\resumeSubHeadingListEnd
+\vspace{-4pt}
+
+%-----------TECHNICAL SKILLS-----------
+\section{Technical Skills}
+\begin{itemize}[leftmargin=0.0in, label={}, itemsep=-2pt]
+  \small{
+    \item \textbf{Languages:} JavaScript, Java, C++
+    \item \textbf{Frontend:} HTML5, CSS3, React, Tailwind CSS, React Router, Vite, Monaco Editor
+    \item \textbf{Backend \& Data:} Spring Boot, REST APIs, PostgreSQL, MySQL, Redis
+    \item \textbf{Tools \& Concepts:} Git, Docker, Linux, Data Structures \& Algorithms, Responsive Web Design, Component-Based UI
+  }
+\end{itemize}
+\vspace{-4pt}
+
+%-----------AWARDS & ACHIEVEMENTS-----------
+\section{Awards \& Achievements}
+\resumeItemListStart
+  \resumeItem{Secured \textbf{All India Rank 648} in GATE 2025 (Computer Science \& Engineering) --- top 0.5\% among $\sim$1.6 lakh candidates.}
+  \resumeItem{Solved \textbf{500+ Data Structures and Algorithms problems} across multiple competitive programming and coding platforms.}
+\resumeItemListEnd
+
+\end{document}
