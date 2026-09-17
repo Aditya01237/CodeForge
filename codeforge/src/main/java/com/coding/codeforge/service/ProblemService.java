@@ -21,6 +21,7 @@ public class ProblemService {
 
         problem.setTitle(clean(request.getTitle()));
         problem.setDifficulty(clean(request.getDifficulty()));
+        problem.setCategory(clean(request.getCategory()));
         problem.setDescription(clean(request.getDescription()));
         problem.setInputFormat(clean(request.getInputFormat()));
         problem.setOutputFormat(clean(request.getOutputFormat()));

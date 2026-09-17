@@ -151,13 +151,13 @@ export default function TopBar({
 
   return (
     <div
-      className={`h-16 shrink-0 border-b px-5 flex items-center justify-between ${wrapperClass}`}
+      className={`h-14 shrink-0 border-b px-4 flex items-center justify-between ${wrapperClass}`}
     >
       {/* LEFT */}
       <div className="flex items-center gap-3">
         <button
           onClick={goBack}
-          className={`h-10 w-10 rounded-xl border flex items-center justify-center transition ${softButtonClass}`}
+          className={`h-9 w-9 rounded-lg border flex items-center justify-center transition ${softButtonClass}`}
           title={isTestMode ? "Back to test problems" : "Back to dashboard"}
         >
           {isTestMode ? <ArrowLeft size={17} /> : <Home size={17} />}
@@ -165,8 +165,9 @@ export default function TopBar({
 
         <button
           onClick={goHome}
-          className="text-[21px] font-bold tracking-wide text-[#58A6FF]"
-          style={{ fontFamily: MONO }}
+          className={`text-[16px] font-semibold tracking-[-0.02em] ${
+            isDark ? "text-slate-100" : "text-slate-900"
+          }`}
           title="Go to dashboard"
         >
           CodeForge
@@ -178,7 +179,7 @@ export default function TopBar({
         <button
           onClick={safeRun}
           disabled={running || isExpired}
-          className={`h-10 min-w-[92px] px-5 rounded-xl border flex items-center justify-center gap-2 text-sm font-semibold transition ${
+          className={`h-9 min-w-[84px] px-4 rounded-lg border flex items-center justify-center gap-2 text-sm font-medium transition ${
             running || isExpired
               ? "opacity-60 cursor-not-allowed border-white/10 bg-white/[0.03] text-slate-400"
               : isDark
@@ -198,7 +199,7 @@ export default function TopBar({
         <button
           onClick={safeSubmit}
           disabled={running || isExpired}
-          className={`h-10 min-w-[110px] px-5 rounded-xl border flex items-center justify-center gap-2 text-sm font-semibold transition disabled:opacity-60 ${
+          className={`h-9 min-w-[96px] px-4 rounded-lg border flex items-center justify-center gap-2 text-sm font-medium transition disabled:opacity-60 ${
             isExpired
               ? "border-slate-300 bg-slate-100 text-slate-500 cursor-not-allowed"
               : isDark
@@ -215,7 +216,7 @@ export default function TopBar({
       <div className="flex items-center justify-end gap-3">
         {isTestMode && (
           <div
-            className={`h-10 px-3 rounded-xl border hidden sm:flex items-center gap-2 text-sm font-bold ${timerClass}`}
+            className={`h-9 px-3 rounded-lg border hidden sm:flex items-center gap-2 text-xs font-semibold ${timerClass}`}
             style={{ fontFamily: MONO }}
           >
             {isExpired ? <Lock size={15} /> : <Clock size={15} />}
@@ -227,7 +228,7 @@ export default function TopBar({
 
         <button
           onClick={() => setTheme?.(isDark ? "light" : "dark")}
-          className={`h-10 px-4 rounded-xl border flex items-center gap-2 text-sm font-semibold transition ${softButtonClass}`}
+          className={`h-9 px-3 rounded-lg border flex items-center gap-2 text-sm font-medium transition ${softButtonClass}`}
           title="Toggle theme"
         >
           {isDark ? <Sun size={15} /> : <Moon size={15} />}
@@ -235,14 +236,14 @@ export default function TopBar({
         </button>
 
         <div
-          className={`h-10 px-3 rounded-xl border hidden md:flex items-center gap-2 max-w-[150px] ${
+          className={`h-9 px-2.5 rounded-lg border hidden md:flex items-center gap-2 max-w-[150px] ${
             isDark
               ? "border-white/10 bg-white/[0.04]"
               : "border-slate-200 bg-slate-50"
           }`}
         >
           <div
-            className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
+            className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
               isDark ? "bg-white/10" : "bg-white border border-slate-200"
             }`}
           >

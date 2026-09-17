@@ -21,6 +21,7 @@ const MONO = "'JetBrains Mono', 'Fira Code', ui-monospace, monospace";
 const emptyCase = () => ({
   inputData: "",
   expectedOutput: "",
+  explanation: "",
 });
 
 const defaultBlocks = () => [
@@ -53,6 +54,7 @@ export default function FacultyManageTestPage() {
   const [form, setForm] = useState({
     title: "",
     difficulty: "Easy",
+    category: "Arrays",
     inputFormat: "",
     outputFormat: "",
     constraintsText: "",
@@ -196,11 +198,12 @@ export default function FacultyManageTestPage() {
     });
   };
 
-  const compactCases = (cases) => {
+  const compactCases = (cases, hidden = false) => {
     return cases
       .map((tc) => ({
         inputData: tc.inputData || "",
         expectedOutput: tc.expectedOutput || "",
+        explanation: hidden ? "" : (tc.explanation || "").trim(),
       }))
       .filter((tc) => tc.inputData.trim() || tc.expectedOutput.trim());
   };
@@ -230,7 +233,7 @@ export default function FacultyManageTestPage() {
     }
 
     const sample = compactCases(sampleCases);
-    const hidden = compactCases(hiddenCases);
+    const hidden = compactCases(hiddenCases, true);
 
     if (sample.length === 0) {
       setError("Add at least one sample test case.");
@@ -248,6 +251,7 @@ export default function FacultyManageTestPage() {
       await apiPost(`/faculty/tests/${testId}/problems/create-and-attach`, {
         title: form.title.trim(),
         difficulty: form.difficulty,
+        category: form.category,
         description: createPlainDescription(),
         inputFormat: form.inputFormat,
         outputFormat: form.outputFormat,
@@ -267,6 +271,7 @@ export default function FacultyManageTestPage() {
       setForm({
         title: "",
         difficulty: "Easy",
+        category: "Arrays",
         inputFormat: "",
         outputFormat: "",
         constraintsText: "",
@@ -340,6 +345,23 @@ export default function FacultyManageTestPage() {
                 />
               </label>
             </div>
+
+            {type === "sample" && (
+              <label className="block mt-3">
+                <span className={`text-xs block mb-2 ${muted}`}>
+                  Explanation
+                </span>
+                <textarea
+                  value={tc.explanation}
+                  onChange={(e) =>
+                    updateCase(type, index, "explanation", e.target.value)
+                  }
+                  rows={3}
+                  placeholder="Explain why this sample produces the expected output"
+                  className={`w-full rounded-xl border px-4 py-3 outline-none resize-y ${inputClass}`}
+                />
+              </label>
+            )}
           </div>
         ))}
 
@@ -556,8 +578,8 @@ export default function FacultyManageTestPage() {
                   </p>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
-                  <label className="md:col-span-2">
+                <div className="grid md:grid-cols-3 gap-4">
+                  <label className="md:col-span-3">
                     <span
                       className="text-xs uppercase tracking-[0.18em] text-slate-500 mb-2 block"
                       style={{ fontFamily: MONO }}
@@ -571,6 +593,36 @@ export default function FacultyManageTestPage() {
                       placeholder="Maximum Subarray Sum"
                       className={`w-full h-12 rounded-xl border px-4 outline-none transition ${inputClass}`}
                     />
+                  </label>
+
+                  <label>
+                    <span
+                      className="text-xs uppercase tracking-[0.18em] text-slate-500 mb-2 block"
+                      style={{ fontFamily: MONO }}
+                    >
+                      Category
+                    </span>
+
+                    <select
+                      value={form.category}
+                      onChange={(e) => updateField("category", e.target.value)}
+                      className={`w-full h-12 rounded-xl border px-4 outline-none transition ${inputClass}`}
+                    >
+                      <option>Arrays</option>
+                      <option>Strings</option>
+                      <option>Linked List</option>
+                      <option>Stack</option>
+                      <option>Queue</option>
+                      <option>Binary Search</option>
+                      <option>Two Pointers</option>
+                      <option>Trees</option>
+                      <option>Graphs</option>
+                      <option>Dynamic Programming</option>
+                      <option>Greedy</option>
+                      <option>Heap</option>
+                      <option>Bit Manipulation</option>
+                      <option>Basic Programming</option>
+                    </select>
                   </label>
 
                   <label>

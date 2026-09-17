@@ -13,6 +13,9 @@ import FacultyDashboard from "./pages/FacultyDashboard";
 import FacultyCreateTestPage from "./pages/FacultyCreateTestPage";
 import FacultyManageTestPage from "./pages/FacultyManageTestPage";
 import FacultyResultsPage from "./pages/FacultyResultsPage";
+import LiveLeaderboardPage from "./pages/LiveLeaderboardPage";
+import InterviewHubPage from "./pages/InterviewHubPage";
+import InterviewRoomPage from "./pages/InterviewRoomPage";
 
 function App() {
   return (
@@ -34,6 +37,17 @@ function App() {
         />
         <Route path="/test/:testId/lobby" element={<TestLobbyPage />} />
         <Route path="/test/:testId/problems" element={<TestProblemsPage />} />
+        <Route
+          path="/test/:testId/leaderboard"
+          element={<LiveLeaderboardPage />}
+        />
+
+        {/* Interview practice */}
+        <Route path="/interview" element={<InterviewHubPage />} />
+        <Route
+          path="/interview/room/:roomCode"
+          element={<InterviewRoomPage />}
+        />
 
         {/* Faculty */}
         <Route path="/faculty" element={<FacultyDashboard />} />
@@ -52,6 +66,10 @@ function App() {
         <Route
           path="/faculty/tests/:testId/results"
           element={<FacultyResultsPage />}
+        />
+        <Route
+          path="/faculty/tests/:testId/live"
+          element={<LiveLeaderboardPage />}
         />
       </Routes>
     </BrowserRouter>

@@ -11,11 +11,14 @@ import org.springframework.web.bind.annotation.*;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "http://localhost:5173")
 public class CodeController {
+
+    private static final int MAX_CODE_LENGTH = 100_000;
+    private static final Set<String> SUPPORTED_LANGUAGES = Set.of("cpp", "python", "java");
 
     private final JudgeService judgeService;
     private final TestCaseService testCaseService;
@@ -81,8 +84,16 @@ public class CodeController {
             throw new RuntimeException("Language is required");
         }
 
+        if (!SUPPORTED_LANGUAGES.contains(request.getLanguage())) {
+            throw new RuntimeException("Unsupported language");
+        }
+
         if (request.getCode() == null || request.getCode().isBlank()) {
             throw new RuntimeException("Code is required");
+        }
+
+        if (request.getCode().length() > MAX_CODE_LENGTH) {
+            throw new RuntimeException("Code cannot exceed 100000 characters");
         }
     }
 }

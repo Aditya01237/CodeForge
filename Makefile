@@ -1,14 +1,18 @@
 SHELL := /bin/bash
 
+-include .env.local
+
 ROOT_DIR := $(shell pwd)
 
 BACKEND_DIR := codeforge
 FRONTEND_DIR := algojudge
 JUDGE_DIR := judge-service
 
-MYSQL_CONTAINER := codeforge-mysql
-MYSQL_ROOT_PASSWORD := Root@12345
+MYSQL_CONTAINER := codeforge-mysql-3307
+MYSQL_ROOT_PASSWORD ?=
+REDIS_PASSWORD ?=
 MYSQL_DATABASE := codeforge
+MYSQL_HOST_PORT := 3307
 
 LOG_DIR := $(ROOT_DIR)/logs
 PID_DIR := $(ROOT_DIR)/.pids
@@ -50,13 +54,18 @@ redis:
 mysql:
 	@echo "🐬 Starting MySQL..."
 	@if docker ps -a --format '{{.Names}}' | grep -q '^$(MYSQL_CONTAINER)$$'; then \
+		binding=$$(docker inspect "$(MYSQL_CONTAINER)" --format '{{(index (index .HostConfig.PortBindings "3306/tcp") 0).HostIp}}'); \
+		if [ "$$binding" != "127.0.0.1" ]; then \
+			echo "❌ MySQL is not loopback-only. Recreate it with 127.0.0.1 binding first."; \
+			exit 1; \
+		fi; \
 		docker start "$(MYSQL_CONTAINER)" >/dev/null; \
 	else \
 		docker run --name "$(MYSQL_CONTAINER)" \
 			-e MYSQL_ROOT_PASSWORD="$(MYSQL_ROOT_PASSWORD)" \
 			-e MYSQL_DATABASE="$(MYSQL_DATABASE)" \
-			-p 3306:3306 \
-			-d mysql:8 >/dev/null; \
+			-p 127.0.0.1:$(MYSQL_HOST_PORT):3306 \
+			-d mysql:8.4 >/dev/null; \
 	fi
 	@echo "⏳ Waiting for MySQL to be ready..."
 	@for i in {1..40}; do \
@@ -84,7 +93,7 @@ start: infra runner-images
 	@if [ -f "$(PID_DIR)/backend.pid" ] && kill -0 $$(cat "$(PID_DIR)/backend.pid") 2>/dev/null; then \
 		echo "Backend already running"; \
 	else \
-		(cd "$(BACKEND_DIR)" && nohup mvn spring-boot:run > "$(LOG_DIR)/backend.log" 2>&1 & echo $$! > "$(PID_DIR)/backend.pid"); \
+		(cd "$(BACKEND_DIR)" && SERVER_ADDRESS=127.0.0.1 DB_URL="jdbc:mysql://127.0.0.1:$(MYSQL_HOST_PORT)/$(MYSQL_DATABASE)" DB_USERNAME=root DB_PASSWORD="$(MYSQL_ROOT_PASSWORD)" REDIS_HOST=127.0.0.1 REDIS_PORT=6379 REDIS_PASSWORD="$(REDIS_PASSWORD)" nohup ./mvnw spring-boot:run > "$(LOG_DIR)/backend.log" 2>&1 & echo $$! > "$(PID_DIR)/backend.pid"); \
 	fi
 	@echo "⏳ Waiting for backend startup..."
 	@sleep 8
@@ -92,13 +101,13 @@ start: infra runner-images
 	@if [ -f "$(PID_DIR)/judge.pid" ] && kill -0 $$(cat "$(PID_DIR)/judge.pid") 2>/dev/null; then \
 		echo "Judge already running"; \
 	else \
-		(cd "$(JUDGE_DIR)" && nohup go run . > "$(LOG_DIR)/judge.log" 2>&1 & echo $$! > "$(PID_DIR)/judge.pid"); \
+		(cd "$(JUDGE_DIR)" && REDIS_PASSWORD="$(REDIS_PASSWORD)" nohup go run . > "$(LOG_DIR)/judge.log" 2>&1 & echo $$! > "$(PID_DIR)/judge.pid"); \
 	fi
 	@echo "🚀 Starting React frontend..."
 	@if [ -f "$(PID_DIR)/frontend.pid" ] && kill -0 $$(cat "$(PID_DIR)/frontend.pid") 2>/dev/null; then \
 		echo "Frontend already running"; \
 	else \
-		(cd "$(FRONTEND_DIR)" && nohup npm run dev -- --host 0.0.0.0 > "$(LOG_DIR)/frontend.log" 2>&1 & echo $$! > "$(PID_DIR)/frontend.pid"); \
+		(cd "$(FRONTEND_DIR)" && nohup npm run dev > "$(LOG_DIR)/frontend.log" 2>&1 & echo $$! > "$(PID_DIR)/frontend.pid"); \
 	fi
 	@echo ""
 	@echo "✅ CodeForge started"
@@ -107,10 +116,10 @@ start: infra runner-images
 run: start
 
 backend:
-	cd "$(BACKEND_DIR)" && mvn spring-boot:run
+	@cd "$(BACKEND_DIR)" && SERVER_ADDRESS=127.0.0.1 DB_URL="jdbc:mysql://127.0.0.1:$(MYSQL_HOST_PORT)/$(MYSQL_DATABASE)" DB_USERNAME=root DB_PASSWORD="$(MYSQL_ROOT_PASSWORD)" REDIS_HOST=127.0.0.1 REDIS_PORT=6379 REDIS_PASSWORD="$(REDIS_PASSWORD)" ./mvnw spring-boot:run
 
 judge:
-	cd "$(JUDGE_DIR)" && go run .
+	@cd "$(JUDGE_DIR)" && REDIS_PASSWORD="$(REDIS_PASSWORD)" go run .
 
 frontend:
 	cd "$(FRONTEND_DIR)" && npm run dev
@@ -161,8 +170,8 @@ frontend-log:
 urls:
 	@echo ""
 	@echo "Frontend:      http://localhost:5173"
-	@echo "Backend API:   http://localhost:8080/api"
-	@echo "Judge Health:  http://localhost:8081/health"
+	@echo "Backend API:   http://127.0.0.1:8080/api (loopback only)"
+	@echo "Judge Health:  http://127.0.0.1:8081/health (loopback only)"
 	@echo "Faculty:       http://localhost:5173/faculty"
 	@echo "Test Access:   http://localhost:5173/test-access"
 	@echo ""

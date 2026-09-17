@@ -53,8 +53,6 @@ export default function TestAccessPage() {
     setLoading(true);
 
     try {
-      // Current backend validates only testCode.
-      // Later we will replace this with POST /api/tests/verify-access.
       const test = await apiPost("/tests/verify-access", {
         testCode: testCode.trim(),
         testPassword: testPassword.trim(),
@@ -138,7 +136,7 @@ export default function TestAccessPage() {
         </button>
       </nav>
 
-      <main className="max-w-6xl mx-auto px-6 py-12">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-12">
         <div className="grid lg:grid-cols-[1.15fr_0.85fr] gap-8 items-center">
           <section>
             <div
@@ -148,7 +146,7 @@ export default function TestAccessPage() {
               Secure Test Entry
             </div>
 
-            <h1 className="text-5xl lg:text-6xl font-black leading-tight mb-5">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight mb-5">
               Join your coding test.
               <br />
               <span className="text-[#58A6FF]">No signup needed.</span>
@@ -252,8 +250,8 @@ export default function TestAccessPage() {
             </button>
 
             <p className="text-xs text-slate-500 mt-4 leading-5">
-              For now password is stored for the flow. Backend password
-              validation will be added next.
+              Your test code and password are verified before participant
+              details or questions are shown.
             </p>
           </form>
         </div>

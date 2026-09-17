@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"os"
 	"time"
 
 	"codeforge-judge/models"
@@ -19,7 +20,8 @@ func StartRedisWorker() {
 	ctx := context.Background()
 
 	rdb := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr:     "127.0.0.1:6379",
+		Password: os.Getenv("REDIS_PASSWORD"),
 	})
 
 	log.Println("🔥 Redis judge worker started")
@@ -28,6 +30,7 @@ func StartRedisWorker() {
 		result, err := rdb.BLPop(ctx, 0*time.Second, queueName).Result()
 		if err != nil {
 			log.Println("Redis BLPop error:", err)
+			time.Sleep(time.Second)
 			continue
 		}
 
@@ -43,29 +46,37 @@ func StartRedisWorker() {
 			continue
 		}
 
-		log.Println("🔥 Processing job:", job.JobID, "language:", job.Language)
+		log.Println(
+			"🔥 Processing submission job:",
+			job.JobID,
+			"language:",
+			job.Language,
+			"test cases:",
+			len(job.TestCases),
+		)
 
-		runReq := models.RunRequest{
-			Language: job.Language,
-			Code:     job.Code,
-			Input:    job.Input,
+		runReq := models.BatchRunRequest{
+			Language:  job.Language,
+			Code:      job.Code,
+			TestCases: job.TestCases,
 		}
 
-		runResp := runner.RunCode(runReq)
+		runResp := runner.RunBatch(runReq)
 
 		judgeResult := models.JudgeResult{
-			JobID:  job.JobID,
-			Status: runResp.Status,
-			Output: runResp.Output,
-			Error:  runResp.Error,
-			TimeMs: runResp.TimeMs,
+			JobID:         job.JobID,
+			Status:        runResp.Status,
+			Error:         runResp.Error,
+			CompileTimeMs: runResp.CompileTimeMs,
+			TimeMs:        runResp.TimeMs,
+			Results:       runResp.Results,
 		}
 
 		resultBytes, _ := json.Marshal(judgeResult)
 
 		resultKey := resultPrefix + job.JobID
 
-		err = rdb.Set(ctx, resultKey, string(resultBytes), 30*time.Second).Err()
+		err = rdb.Set(ctx, resultKey, string(resultBytes), 2*time.Minute).Err()
 		if err != nil {
 			log.Println("Failed to store result:", err)
 			continue

@@ -3,6 +3,7 @@ package com.coding.codeforge.controller;
 import com.coding.codeforge.DTO.FacultySubmissionDetailResponse;
 import com.coding.codeforge.DTO.FacultyTestResultDashboardResponse;
 import com.coding.codeforge.DTO.ProblemStatusResponse;
+import com.coding.codeforge.DTO.TestLeaderboardResponse;
 import com.coding.codeforge.service.SubmissionService;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,7 +11,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "http://localhost:5173")
 public class SubmissionController {
 
     private final SubmissionService submissionService;
@@ -39,5 +39,10 @@ public class SubmissionController {
             @PathVariable Long submissionId
     ) {
         return submissionService.getFacultySubmissionDetail(submissionId);
+    }
+
+    @GetMapping("/tests/{testId}/leaderboard")
+    public TestLeaderboardResponse getTestLeaderboard(@PathVariable Long testId) {
+        return submissionService.getTestLeaderboard(testId);
     }
 }

@@ -16,6 +16,8 @@ public class Problem {
 
     private String difficulty;
 
+    private String category;
+
     @Column(columnDefinition = "TEXT")
     private String description;
 
@@ -70,6 +72,10 @@ public class Problem {
         return difficulty;
     }
 
+    public String getCategory() {
+        return category;
+    }
+
     public String getDescription() {
         return description;
     }
@@ -112,6 +118,10 @@ public class Problem {
 
     public void setDifficulty(String difficulty) {
         this.difficulty = difficulty;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
     }
 
     public void setDescription(String description) {

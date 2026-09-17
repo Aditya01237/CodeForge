@@ -46,7 +46,7 @@ export default function ProblemPage() {
   const [input, setInput] = useState("");
 
   const MIN_EDITOR_HEIGHT = 200;
-  const RESIZER_HEIGHT = 6;
+  const RESIZER_HEIGHT = 5;
 
   useEffect(() => {
     localStorage.setItem("cf_theme", theme);
@@ -305,7 +305,10 @@ export default function ProblemPage() {
   }
 
   const pageBg = theme === "dark" ? "bg-[#070B12]" : "bg-[#F8FAFC]";
-  const dividerBg = theme === "dark" ? "bg-white/10" : "bg-slate-200";
+  const dividerBg =
+    theme === "dark"
+      ? "bg-[#0D1117] hover:bg-blue-500/70"
+      : "bg-slate-100 hover:bg-blue-400";
 
   return (
     <div className={`flex flex-col h-screen overflow-hidden ${pageBg}`}>
@@ -335,7 +338,8 @@ export default function ProblemPage() {
 
         <div
           onMouseDown={() => (draggingVertical.current = true)}
-          className={`w-[6px] cursor-col-resize flex-shrink-0 ${dividerBg}`}
+          className={`w-[5px] cursor-col-resize flex-shrink-0 transition-colors ${dividerBg}`}
+          title="Drag to resize problem and editor"
         />
 
         <div
@@ -361,7 +365,8 @@ export default function ProblemPage() {
 
           <div
             onMouseDown={() => (draggingHorizontal.current = true)}
-            className={`h-[6px] cursor-row-resize flex-shrink-0 ${dividerBg}`}
+            className={`h-[5px] cursor-row-resize flex-shrink-0 transition-colors ${dividerBg}`}
+            title="Drag to resize editor and console"
           />
 
           <div

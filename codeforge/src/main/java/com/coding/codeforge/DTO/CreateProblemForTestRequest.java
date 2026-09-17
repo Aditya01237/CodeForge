@@ -7,6 +7,7 @@ public class CreateProblemForTestRequest {
 
     private String title;
     private String difficulty;
+    private String category;
     private String description;
     private String inputFormat;
     private String outputFormat;
@@ -30,6 +31,10 @@ public class CreateProblemForTestRequest {
 
     public String getDifficulty() {
         return difficulty;
+    }
+
+    public String getCategory() {
+        return category;
     }
 
     public String getDescription() {
@@ -74,6 +79,10 @@ public class CreateProblemForTestRequest {
 
     public void setDifficulty(String difficulty) {
         this.difficulty = difficulty;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
     }
 
     public void setDescription(String description) {
